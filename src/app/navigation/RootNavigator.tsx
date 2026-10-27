@@ -10,6 +10,8 @@ import { MaterialIcons } from '@react-native-vector-icons/material-icons/static'
 import { ProductsNavigator } from './ProductsNavigator';
 import { CategoriesNavigator } from './CategoriesNavigator';
 import { RootTabParamList } from './navigationTypes';
+import { AuthProvider, LoginScreen, useAuth } from '../../features/auth';
+import { container } from '../../di/container';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
@@ -29,19 +31,38 @@ function CategoriesTabIcon({ color, size }: { color: string; size: number }) {
  */
 export function RootNavigator() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator screenOptions={{ headerShown: false }}>
-        <Tab.Screen
-          name="Products"
-          component={ProductsNavigator}
-          options={{ tabBarIcon: ProductsTabIcon }}
-        />
-        <Tab.Screen
-          name="Categories"
-          component={CategoriesNavigator}
-          options={{ tabBarIcon: CategoriesTabIcon }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <AuthProvider login={container.login} sessionStorage={container.sessionStorage}>
+      <NavigationContainer>
+        <AuthGate />
+      </NavigationContainer>
+    </AuthProvider>
+  );
+}
+
+/**
+ * Switches between the signed-out (Login) and signed-in (tabs) experience
+ * from the single `AuthContext` source of truth, inside the same
+ * `NavigationContainer` so the app isn't torn down on sign-in.
+ */
+function AuthGate() {
+  const { state } = useAuth();
+
+  if (state.status === 'signedOut') {
+    return <LoginScreen />;
+  }
+
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen
+        name="Products"
+        component={ProductsNavigator}
+        options={{ tabBarIcon: ProductsTabIcon }}
+      />
+      <Tab.Screen
+        name="Categories"
+        component={CategoriesNavigator}
+        options={{ tabBarIcon: CategoriesTabIcon }}
+      />
+    </Tab.Navigator>
   );
 }

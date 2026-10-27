@@ -11,6 +11,12 @@ import {
   createCategoryRepository,
   createGetCategories,
 } from '../features/categories';
+import {
+  createAuthRemoteDataSource,
+  createAuthRepository,
+  createLogin,
+  createSecureSessionStorage,
+} from '../features/auth';
 
 /**
  * Application composition root. Wires concrete implementations to the
@@ -28,9 +34,14 @@ const productRepository = createProductRepository(productRemoteDataSource);
 const categoryRemoteDataSource = createCategoryRemoteDataSource(fetchHttpClient);
 const categoryRepository = createCategoryRepository(categoryRemoteDataSource);
 
+const authRemoteDataSource = createAuthRemoteDataSource(fetchHttpClient);
+const authRepository = createAuthRepository(authRemoteDataSource);
+
 export const container = {
   getProducts: createGetProducts(productRepository),
   getProductDetails: createGetProductDetails(productRepository),
   getProductsByCategory: createGetProductsByCategory(productRepository),
   getCategories: createGetCategories(categoryRepository),
+  login: createLogin(authRepository),
+  sessionStorage: createSecureSessionStorage(),
 };
