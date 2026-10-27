@@ -15,6 +15,10 @@ import {
   createAuthRemoteDataSource,
   createAuthRepository,
   createLogin,
+  createGetCurrentUser,
+  createRefreshSession,
+  createRestoreSession,
+  createLogout,
   createSecureSessionStorage,
 } from '../features/auth';
 
@@ -36,6 +40,8 @@ const categoryRepository = createCategoryRepository(categoryRemoteDataSource);
 
 const authRemoteDataSource = createAuthRemoteDataSource(fetchHttpClient);
 const authRepository = createAuthRepository(authRemoteDataSource);
+const authSessionStorage = createSecureSessionStorage();
+const refreshSession = createRefreshSession(authRepository);
 
 export const container = {
   getProducts: createGetProducts(productRepository),
@@ -43,5 +49,9 @@ export const container = {
   getProductsByCategory: createGetProductsByCategory(productRepository),
   getCategories: createGetCategories(categoryRepository),
   login: createLogin(authRepository),
-  sessionStorage: createSecureSessionStorage(),
+  getCurrentUser: createGetCurrentUser(authRepository),
+  refreshSession,
+  restoreSession: createRestoreSession(authRepository, authSessionStorage, refreshSession),
+  logout: createLogout(authSessionStorage),
+  sessionStorage: authSessionStorage,
 };

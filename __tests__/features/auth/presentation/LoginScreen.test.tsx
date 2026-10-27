@@ -3,7 +3,7 @@ import ReactTestRenderer, { act } from 'react-test-renderer';
 import { ActivityIndicator, Text } from 'react-native';
 import { AuthProvider, useAuth } from '../../../../src/features/auth/presentation/context/AuthContext';
 import { LoginScreen } from '../../../../src/features/auth/presentation/screens/LoginScreen';
-import { AuthSessionStorage } from '../../../../src/features/auth/data/storage/SecureSessionStorage';
+import { AuthSessionStorage } from '../../../../src/features/auth/domain/repositories/AuthSessionStorage';
 import { AuthSession } from '../../../../src/features/auth/domain/models/AuthSession';
 
 const sampleSession: AuthSession = {
@@ -29,13 +29,19 @@ function AuthStateProbe() {
   return <Text testID="auth-state">{state.status}</Text>;
 }
 
-function renderLoginScreen(login: jest.Mock, sessionStorage: AuthSessionStorage) {
+async function renderLoginScreen(login: jest.Mock, sessionStorage: AuthSessionStorage) {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
-  // `KeyboardAvoidingView` sets state from `componentDidMount`; rendering
-  // outside `act` leaves that update dangling past the end of a sync test.
-  act(() => {
+  // `KeyboardAvoidingView` sets state from `componentDidMount`, and
+  // `AuthProvider` kicks off an async session-restore check on mount —
+  // flushing both inside `act` here keeps every test starting from a
+  // settled (`signedOut`) state instead of a dangling `checking` one.
+  await act(async () => {
     renderer = ReactTestRenderer.create(
-      <AuthProvider login={login} sessionStorage={sessionStorage}>
+      <AuthProvider
+        login={login}
+        logout={jest.fn()}
+        restoreSession={jest.fn().mockResolvedValue(null)}
+        sessionStorage={sessionStorage}>
         <LoginScreen />
         <AuthStateProbe />
       </AuthProvider>,
@@ -59,8 +65,8 @@ function typeInto(input: ReactTestRenderer.ReactTestInstance, text: string) {
 }
 
 describe('LoginScreen', () => {
-  it('disables the login button until both fields are filled', () => {
-    const renderer = renderLoginScreen(jest.fn(), fakeSessionStorage());
+  it('disables the login button until both fields are filled', async () => {
+    const renderer = await renderLoginScreen(jest.fn(), fakeSessionStorage());
 
     const loginButton = renderer.root.findByProps({ accessibilityLabel: 'Login' });
     expect(loginButton.props.disabled).toBe(true);
@@ -72,8 +78,8 @@ describe('LoginScreen', () => {
     expect(renderer.root.findByProps({ accessibilityLabel: 'Login' }).props.disabled).toBe(false);
   });
 
-  it('toggles password visibility', () => {
-    const renderer = renderLoginScreen(jest.fn(), fakeSessionStorage());
+  it('toggles password visibility', async () => {
+    const renderer = await renderLoginScreen(jest.fn(), fakeSessionStorage());
 
     expect(renderer.root.findByProps({ accessibilityLabel: 'Password' }).props.secureTextEntry).toBe(
       true,
@@ -91,7 +97,7 @@ describe('LoginScreen', () => {
   it('logs in, persists the session, and updates the shared auth state on success', async () => {
     const login = jest.fn().mockResolvedValue(sampleSession);
     const sessionStorage = fakeSessionStorage();
-    const renderer = renderLoginScreen(login, sessionStorage);
+    const renderer = await renderLoginScreen(login, sessionStorage);
 
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Username' }), 'emilys');
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Password' }), 'emilyspass');
@@ -113,7 +119,7 @@ describe('LoginScreen', () => {
         resolveLogin = resolve;
       }),
     );
-    const renderer = renderLoginScreen(login, fakeSessionStorage());
+    const renderer = await renderLoginScreen(login, fakeSessionStorage());
 
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Username' }), 'emilys');
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Password' }), 'emilyspass');
@@ -135,7 +141,7 @@ describe('LoginScreen', () => {
 
   it('shows an error message on invalid credentials without changing the auth state', async () => {
     const login = jest.fn().mockRejectedValue(new Error('Invalid username or password.'));
-    const renderer = renderLoginScreen(login, fakeSessionStorage());
+    const renderer = await renderLoginScreen(login, fakeSessionStorage());
 
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Username' }), 'emilys');
     typeInto(renderer.root.findByProps({ accessibilityLabel: 'Password' }), 'wrong');

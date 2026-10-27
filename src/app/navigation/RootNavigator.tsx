@@ -1,4 +1,6 @@
 import React from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 // The default (non-"/static") import uses dynamic font loading, which
@@ -31,7 +33,11 @@ function CategoriesTabIcon({ color, size }: { color: string; size: number }) {
  */
 export function RootNavigator() {
   return (
-    <AuthProvider login={container.login} sessionStorage={container.sessionStorage}>
+    <AuthProvider
+      login={container.login}
+      logout={container.logout}
+      restoreSession={container.restoreSession}
+      sessionStorage={container.sessionStorage}>
       <NavigationContainer>
         <AuthGate />
       </NavigationContainer>
@@ -40,29 +46,82 @@ export function RootNavigator() {
 }
 
 /**
- * Switches between the signed-out (Login) and signed-in (tabs) experience
- * from the single `AuthContext` source of truth, inside the same
+ * Switches between checking/signed-out/signed-in experiences from the
+ * single `AuthContext` source of truth, inside the same
  * `NavigationContainer` so the app isn't torn down on sign-in.
  */
 function AuthGate() {
-  const { state } = useAuth();
+  const { state, logout } = useAuth();
+
+  if (state.status === 'checking') {
+    return (
+      <View style={styles.checkingContainer}>
+        <ActivityIndicator size="large" accessibilityLabel="Checking session" />
+      </View>
+    );
+  }
 
   if (state.status === 'signedOut') {
     return <LoginScreen />;
   }
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen
-        name="Products"
-        component={ProductsNavigator}
-        options={{ tabBarIcon: ProductsTabIcon }}
-      />
-      <Tab.Screen
-        name="Categories"
-        component={CategoriesNavigator}
-        options={{ tabBarIcon: CategoriesTabIcon }}
-      />
-    </Tab.Navigator>
+    <View style={styles.signedInContainer}>
+      <SafeAreaView edges={['top']} style={styles.accountBar}>
+        <Text style={styles.accountText} numberOfLines={1}>
+          {state.user.firstName} {state.user.lastName}
+        </Text>
+        <Pressable
+          onPress={logout}
+          accessibilityRole="button"
+          accessibilityLabel="Log out"
+          style={styles.logoutButton}>
+          <MaterialIcons name="logout" size={20} color="#374151" />
+        </Pressable>
+      </SafeAreaView>
+      <Tab.Navigator screenOptions={{ headerShown: false }}>
+        <Tab.Screen
+          name="Products"
+          component={ProductsNavigator}
+          options={{ tabBarIcon: ProductsTabIcon }}
+        />
+        <Tab.Screen
+          name="Categories"
+          component={CategoriesNavigator}
+          options={{ tabBarIcon: CategoriesTabIcon }}
+        />
+      </Tab.Navigator>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  checkingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  signedInContainer: {
+    flex: 1,
+  },
+  accountBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#d1d5db',
+  },
+  accountText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  logoutButton: {
+    padding: 6,
+  },
+});

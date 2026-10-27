@@ -1,14 +1,9 @@
 import * as Keychain from 'react-native-keychain';
 import { AuthSession } from '../../domain/models/AuthSession';
+import { AuthSessionStorage } from '../../domain/repositories/AuthSessionStorage';
 
 /** Scopes the Keychain entry to this app/feature, distinct from any other credential it might store. */
 const SERVICE = 'com.propertylistingapp.session';
-
-export interface AuthSessionStorage {
-  save(session: AuthSession): Promise<void>;
-  load(): Promise<AuthSession | null>;
-  clear(): Promise<void>;
-}
 
 function isStoredSession(value: unknown): value is AuthSession {
   if (typeof value !== 'object' || value === null) {
