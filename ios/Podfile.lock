@@ -1421,6 +1421,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-vector-icons-material-icons (14.0.0)
   - React-NativeModulesApple (0.88.0):
     - hermes-engine
     - React-bridging
@@ -1917,6 +1918,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - "react-native-vector-icons-material-icons (from `../node_modules/@react-native-vector-icons/material-icons`)"
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2056,6 +2058,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-vector-icons-material-icons:
+    :path: "../node_modules/@react-native-vector-icons/material-icons"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2186,6 +2190,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 8b3aaa5f3b907ecf071b105589868d9f027a448d
   React-mutationobservernativemodule: 11d77d3f7360578f07847843544ada23cc473049
   react-native-safe-area-context: b1c9f15a36e597e9cef4c5526e209ef2645bc2e0
+  react-native-vector-icons-material-icons: c62c72e4fa041a49e2cab6c760e4cb5c1343acb3
   React-NativeModulesApple: 52f3def085f129de1307e3eb78e26729ff70f421
   React-networking: 1e6441349ac72bfd4f7a79c300c3dd76993a7058
   React-oscompat: e64123dd8199f9e99cede19fa542c3da3445481e
