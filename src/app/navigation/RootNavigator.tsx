@@ -1,39 +1,25 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { container } from '../../di/container';
-import { ProductListScreen, ProductDetailsScreen } from '../../features/products';
-import { RootStackParamList } from './navigationTypes';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { ProductsNavigator } from './ProductsNavigator';
+import { CategoriesScreen } from '../../features/categories';
+import { RootTabParamList } from './navigationTypes';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 /**
- * App-level composition for navigation. This is the one place outside
- * `di/container.ts` allowed to reach into `container` directly, since
- * wiring a concrete dependency to a route is a composition concern, not a
- * domain or presentation one.
+ * App-level root: a bottom-tab navigator. Each tab owns its header — the
+ * tab navigator's own header is hidden so it never stacks a second header
+ * on top of a tab's content (the Products tab already manages its own via
+ * its nested stack).
  */
 export function RootNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Products">
-        <Stack.Screen name="Products" options={{ headerShown: false }}>
-          {() => <ProductListScreen getProducts={container.getProducts} />}
-        </Stack.Screen>
-        <Stack.Screen
-          name="ProductDetails"
-          options={{
-            title: 'Property Details',
-            headerBackButtonDisplayMode: 'minimal',
-          }}>
-          {props => (
-            <ProductDetailsScreen
-              {...props}
-              getProductDetails={container.getProductDetails}
-            />
-          )}
-        </Stack.Screen>
-      </Stack.Navigator>
+      <Tab.Navigator screenOptions={{ headerShown: false }}>
+        <Tab.Screen name="Products" component={ProductsNavigator} />
+        <Tab.Screen name="Categories" component={CategoriesScreen} />
+      </Tab.Navigator>
     </NavigationContainer>
   );
 }
