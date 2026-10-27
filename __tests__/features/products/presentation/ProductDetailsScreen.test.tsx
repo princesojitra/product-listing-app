@@ -8,7 +8,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProductListScreen } from '../../../../src/features/products/presentation/screens/ProductListScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
-import { RootStackParamList } from '../../../../src/app/navigation/navigationTypes';
+import { RootStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 import { ProductDetails } from '../../../../src/features/products/domain/models/ProductDetails';
 
@@ -68,7 +68,7 @@ async function navigateToDetails(
     renderer = ReactTestRenderer.create(
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator>
-          <Stack.Screen name="Products">
+          <Stack.Screen name="ProductsList">
             {() => <ProductListScreen getProducts={getProducts} />}
           </Stack.Screen>
           <Stack.Screen name="ProductDetails">
@@ -207,7 +207,7 @@ describe('ProductDetailsScreen', () => {
       navigationRef.current?.goBack();
     });
 
-    expect(navigationRef.current?.getCurrentRoute()?.name).toBe('Products');
+    expect(navigationRef.current?.getCurrentRoute()?.name).toBe('ProductsList');
     expect(findAllText(renderer)).toContain('Sample product 1');
   });
 });

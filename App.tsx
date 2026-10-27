@@ -7,7 +7,7 @@
 
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { RootNavigator } from './src/app/navigation/RootNavigator';
+import { RootNavigator } from './src/app/navigation/navigators/RootNavigator';
 import { ToastProvider } from './src/core/ui/Toast';
 
 function App() {

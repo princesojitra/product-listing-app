@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ProductDetailsParams } from '../../../../app/navigation/navigationTypes';
+import { ProductDetailsParams } from '../../../../app/navigation/types';
+import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
 import { GetProductDetails } from '../../domain/usecases/GetProductDetails';
 import { useProductDetails } from '../hooks/useProductDetails';
+import { GlassButton } from '../../../../core/ui/GlassButton';
 
 /**
  * Typed only against its own route's params, not a specific parent stack's
@@ -47,6 +41,7 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
   const { productId } = route.params;
   const { state, retry } = useProductDetails(productId, getProductDetails);
   const [imageFailed, setImageFailed] = useState(false);
+  const { scrollInsetProps } = useGlassScrollInsets();
 
   // A fresh product id deserves a fresh chance to load its own image,
   // rather than inheriting the previous product's load failure.
@@ -63,7 +58,7 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
   }, [state, navigation]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} {...scrollInsetProps}>
       {state.status === 'loading' && (
         <View style={styles.centered}>
           <ActivityIndicator
@@ -77,13 +72,12 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
       {state.status === 'error' && (
         <View style={styles.centered}>
           <Text style={styles.centeredText}>{state.message}</Text>
-          <Pressable
+          <GlassButton
+            label="Retry"
             onPress={retry}
-            accessibilityRole="button"
             accessibilityLabel="Retry loading property details"
-            style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+            style={styles.retryButton}
+          />
         </View>
       )}
 
@@ -208,15 +202,6 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 15,
   },
   image: {
     width: '100%',

@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CategoriesStackParamList } from '../../../../app/navigation/navigationTypes';
+import { CategoriesStackParamList } from '../../../../app/navigation/types';
+import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
 import { Product } from '../../domain/models/Product';
 import { GetProductsByCategory } from '../../domain/usecases/GetProductsByCategory';
 import { useProductsByCategory } from '../hooks/useProductsByCategory';
 import { ProductCard } from '../components/ProductCard';
+import { GlassButton } from '../../../../core/ui/GlassButton';
 
 type Props = NativeStackScreenProps<CategoriesStackParamList, 'CategoryProducts'> & {
   getProductsByCategory: GetProductsByCategory;
@@ -18,6 +20,7 @@ function keyExtractor(item: Product): string {
 export function CategoryProductsScreen({ route, navigation, getProductsByCategory }: Props) {
   const { categorySlug } = route.params;
   const { state, retry } = useProductsByCategory(categorySlug, getProductsByCategory);
+  const { topInset, scrollInsetProps } = useGlassScrollInsets();
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => (
@@ -32,27 +35,26 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
   return (
     <View style={styles.container}>
       {state.status === 'loading' && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <ActivityIndicator size="large" accessibilityLabel="Loading products" />
           <Text style={styles.centeredText}>Loading products…</Text>
         </View>
       )}
 
       {state.status === 'error' && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <Text style={styles.centeredText}>{state.message}</Text>
-          <Pressable
+          <GlassButton
+            label="Retry"
             onPress={retry}
-            accessibilityRole="button"
             accessibilityLabel="Retry loading products"
-            style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+            style={styles.retryButton}
+          />
         </View>
       )}
 
       {state.status === 'success' && state.data.length === 0 && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <Text style={styles.centeredText}>
             No products found in this category right now.
           </Text>
@@ -65,6 +67,7 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          {...scrollInsetProps}
         />
       )}
     </View>
@@ -93,14 +96,5 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 15,
   },
 });

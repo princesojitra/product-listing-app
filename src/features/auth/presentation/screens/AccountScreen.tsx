@@ -1,7 +1,9 @@
 import React from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { useToast } from '../../../../core/ui/Toast';
 import { useAuth } from '../context/AuthContext';
+import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
+import { GlassButton } from '../../../../core/ui/GlassButton';
 
 /**
  * Minimal profile screen: just enough to verify who's signed in and sign
@@ -11,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 export function AccountScreen() {
   const { state, logout } = useAuth();
   const { show: showToast } = useToast();
+  const { topInset } = useGlassScrollInsets();
 
   if (state.status !== 'signedIn') {
     return null;
@@ -33,7 +36,7 @@ export function AccountScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: topInset + 24 }]}>
       <Image
         source={{ uri: user.imageUrl }}
         style={styles.avatar}
@@ -46,13 +49,13 @@ export function AccountScreen() {
       <Text style={styles.email}>{user.email}</Text>
       <Text style={styles.username}>@{user.username}</Text>
 
-      <Pressable
-        onPress={confirmLogout}
-        accessibilityRole="button"
+      <GlassButton
+        label="Log Out"
         accessibilityLabel="Log out"
-        style={styles.logoutButton}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </Pressable>
+        onPress={confirmLogout}
+        variant="destructive"
+        style={styles.logoutButton}
+      />
     </View>
   );
 }
@@ -61,7 +64,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 48,
     paddingHorizontal: 24,
     backgroundColor: '#f3f4f6',
   },
@@ -89,14 +91,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logoutButton: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-    paddingVertical: 12,
     paddingHorizontal: 32,
-  },
-  logoutButtonText: {
-    color: '#dc2626',
-    fontSize: 15,
-    fontWeight: '600',
   },
 });

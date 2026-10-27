@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoriesScreen } from '../../../../src/features/categories/presentation/screens/CategoriesScreen';
 import { CategoryProductsScreen } from '../../../../src/features/products/presentation/screens/CategoryProductsScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
-import { CategoriesStackParamList } from '../../../../src/app/navigation/navigationTypes';
+import { CategoriesStackParamList } from '../../../../src/app/navigation/types';
 import { Category } from '../../../../src/features/categories/domain/models/Category';
 
 const Stack = createNativeStackNavigator<CategoriesStackParamList>();

@@ -5,7 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProductListScreen } from '../../../../src/features/products/presentation/screens/ProductListScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
-import { RootStackParamList } from '../../../../src/app/navigation/navigationTypes';
+import { RootStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,7 +31,7 @@ function renderNavigator(getProducts: jest.Mock, getProductDetails: jest.Mock = 
   return ReactTestRenderer.create(
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Products">
+        <Stack.Screen name="ProductsList">
           {() => <ProductListScreen getProducts={getProducts} />}
         </Stack.Screen>
         <Stack.Screen name="ProductDetails">

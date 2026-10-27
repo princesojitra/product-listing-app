@@ -1,8 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { container } from '../../di/container';
-import { ProductListScreen, ProductDetailsScreen } from '../../features/products';
-import { RootStackParamList } from './navigationTypes';
+import { container } from '../../../di/container';
+import { ProductListScreen, ProductDetailsScreen } from '../../../features/products';
+import { RootStackParamList } from '../types';
+import { glassHeaderScreenOptions } from '../shared/glassHeaderScreenOptions';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -13,8 +14,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  */
 export function ProductsNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Products">
-      <Stack.Screen name="Products" options={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="ProductsList" screenOptions={glassHeaderScreenOptions}>
+      <Stack.Screen name="ProductsList" options={{ title: 'Properties' }}>
         {() => <ProductListScreen getProducts={container.getProducts} />}
       </Stack.Screen>
       <Stack.Screen

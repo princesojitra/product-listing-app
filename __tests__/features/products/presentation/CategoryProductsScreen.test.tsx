@@ -5,7 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoryProductsScreen } from '../../../../src/features/products/presentation/screens/CategoryProductsScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
-import { CategoriesStackParamList } from '../../../../src/app/navigation/navigationTypes';
+import { CategoriesStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 
 const Stack = createNativeStackNavigator<CategoriesStackParamList>();

@@ -1,20 +1,14 @@
 import React, { useCallback } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../../app/navigation/navigationTypes';
+import { RootStackParamList } from '../../../../app/navigation/types';
+import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
 import { Product } from '../../domain/models/Product';
 import { GetProducts } from '../../domain/usecases/GetProducts';
 import { useProducts } from '../hooks/useProducts';
 import { ProductCard } from '../components/ProductCard';
+import { GlassButton } from '../../../../core/ui/GlassButton';
 
 function keyExtractor(item: Product): string {
   return item.id;
@@ -22,7 +16,7 @@ function keyExtractor(item: Product): string {
 
 type ProductsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'Products'
+  'ProductsList'
 >;
 
 interface ProductListScreenProps {
@@ -32,6 +26,7 @@ interface ProductListScreenProps {
 export function ProductListScreen({ getProducts }: ProductListScreenProps) {
   const { state, retry } = useProducts(getProducts);
   const navigation = useNavigation<ProductsNavigationProp>();
+  const { topInset, scrollInsetProps } = useGlassScrollInsets();
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => (
@@ -44,13 +39,9 @@ export function ProductListScreen({ getProducts }: ProductListScreenProps) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header} accessibilityRole="header">
-        Properties
-      </Text>
-
+    <View style={styles.container}>
       {state.status === 'loading' && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <ActivityIndicator
             size="large"
             accessibilityLabel="Loading properties"
@@ -60,20 +51,19 @@ export function ProductListScreen({ getProducts }: ProductListScreenProps) {
       )}
 
       {state.status === 'error' && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <Text style={styles.centeredText}>{state.message}</Text>
-          <Pressable
+          <GlassButton
+            label="Retry"
             onPress={retry}
-            accessibilityRole="button"
             accessibilityLabel="Retry loading properties"
-            style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+            style={styles.retryButton}
+          />
         </View>
       )}
 
       {state.status === 'success' && state.data.length === 0 && (
-        <View style={styles.centered}>
+        <View style={[styles.centered, { paddingTop: topInset }]}>
           <Text style={styles.centeredText}>
             No properties found right now. Check back soon.
           </Text>
@@ -86,9 +76,10 @@ export function ProductListScreen({ getProducts }: ProductListScreenProps) {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          {...scrollInsetProps}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -96,13 +87,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f3f4f6',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
   },
   listContent: {
     paddingBottom: 24,
@@ -121,14 +105,5 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 15,
   },
 });

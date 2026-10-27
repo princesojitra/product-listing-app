@@ -3,10 +3,12 @@ const preset = require('@react-native/jest-preset');
 module.exports = {
   preset: '@react-native/jest-preset',
   // The preset's default pattern only transforms react-native itself;
-  // React Navigation, react-native-screens, and react-native-vector-icons
-  // ship untranspiled ESM too.
+  // React Navigation, react-native-screens, react-native-vector-icons, and
+  // react-native-bottom-tabs (and its `color` dependency chain) ship
+  // untranspiled ESM too. @callstack/liquid-glass doesn't need an entry
+  // here — it's fully replaced by the manual mock in __mocks__/.
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community|-vector-icons)?|@react-navigation|react-native-screens)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community|-vector-icons)?|@react-navigation|react-native-screens|react-native-bottom-tabs|@bottom-tabs|color|color-string|color-convert|color-name)/)',
   ],
   // Explicitly merge with the preset's own `transform` (specifying this key
   // at all replaces rather than extends the preset's value) to also stub

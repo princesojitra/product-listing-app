@@ -14,7 +14,7 @@ export type ProductDetailsParams = { productId: string };
  * trusting whatever the previous screen happened to have in memory.
  */
 export type RootStackParamList = {
-  Products: undefined;
+  ProductsList: undefined;
   ProductDetails: ProductDetailsParams;
 };
 
