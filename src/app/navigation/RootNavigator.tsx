@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { container } from '../../di/container';
-import { ListingsScreen, PropertyDetailsScreen } from '../../features/listings';
+import { ProductListScreen, ProductDetailsScreen } from '../../features/products';
 import { RootStackParamList } from './navigationTypes';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -16,18 +16,23 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Listings">
-        <Stack.Screen name="Listings" options={{ headerShown: false }}>
-          {() => <ListingsScreen repository={container.listingRepository} />}
+      <Stack.Navigator initialRouteName="Products">
+        <Stack.Screen name="Products" options={{ headerShown: false }}>
+          {() => <ProductListScreen getProducts={container.getProducts} />}
         </Stack.Screen>
         <Stack.Screen
-          name="PropertyDetails"
-          component={PropertyDetailsScreen}
-          options={({ route }) => ({
-            title: route.params.listing.title,
+          name="ProductDetails"
+          options={{
+            title: 'Property Details',
             headerBackButtonDisplayMode: 'minimal',
-          })}
-        />
+          }}>
+          {props => (
+            <ProductDetailsScreen
+              {...props}
+              getProductDetails={container.getProductDetails}
+            />
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

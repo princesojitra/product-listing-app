@@ -1,24 +1,26 @@
 import { fetchHttpClient } from '../core/network/FetchHttpClient';
 import {
-  ListingRepository,
-  createListingRemoteDataSource,
-  createListingRepository,
-} from '../features/listings';
+  createProductRemoteDataSource,
+  createProductRepository,
+  createGetProducts,
+  createGetProductDetails,
+} from '../features/products';
 
 /**
  * Application composition root. Wires concrete implementations to the
- * interfaces the domain/presentation layers depend on, in dependency order:
- * HTTP client -> remote data source -> repository.
+ * interfaces/use cases the domain/presentation layers depend on, in
+ * dependency order: HTTP client -> remote data source -> repository ->
+ * use cases.
  *
  * Nothing outside this file should import the concrete data-layer pieces
- * (`FetchHttpClient`, `ListingRemoteDataSource`, `ListingRepositoryImpl`)
- * directly — consumers take `ListingRepository` as a parameter instead.
+ * (`FetchHttpClient`, `ProductRemoteDataSource`, `ProductRepositoryImpl`)
+ * directly — consumers take `GetProducts`/`GetProductDetails` as parameters
+ * instead.
  */
-const listingRemoteDataSource = createListingRemoteDataSource(fetchHttpClient);
-const listingRepository: ListingRepository = createListingRepository(
-  listingRemoteDataSource,
-);
+const productRemoteDataSource = createProductRemoteDataSource(fetchHttpClient);
+const productRepository = createProductRepository(productRemoteDataSource);
 
 export const container = {
-  listingRepository,
+  getProducts: createGetProducts(productRepository),
+  getProductDetails: createGetProductDetails(productRepository),
 };

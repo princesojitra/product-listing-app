@@ -1,0 +1,9 @@
+export { ProductListScreen } from './presentation/screens/ProductListScreen';
+export { ProductDetailsScreen } from './presentation/screens/ProductDetailsScreen';
+export type { ProductRepository } from './domain/repositories/ProductRepository';
+export type { Product } from './domain/models/Product';
+export type { ProductDetails } from './domain/models/ProductDetails';
+export { createProductRemoteDataSource } from './data/datasources/ProductRemoteDataSource';
+export { createProductRepository } from './data/repositories/ProductRepositoryImpl';
+export { createGetProducts } from './domain/usecases/GetProducts';
+export { createGetProductDetails } from './domain/usecases/GetProductDetails';
