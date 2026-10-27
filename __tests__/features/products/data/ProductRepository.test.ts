@@ -22,13 +22,35 @@ const sampleProductDto = {
   thumbnail: 'https://dummyjson.com/images/products/1/thumbnail.webp',
 };
 
+const sampleReviewDto = {
+  rating: 3,
+  comment: 'Would not recommend!',
+  date: '2025-04-30T09:41:02.053Z',
+  reviewerName: 'Eleanor Collins',
+  reviewerEmail: 'eleanor.collins@x.dummyjson.com',
+};
+
 const sampleProductDetailsDto = {
   ...sampleProductDto,
   discountPercentage: 10.48,
   stock: 99,
   tags: ['beauty', 'mascara'],
   brand: 'Essence',
+  sku: 'BEA-ESS-ESS-001',
+  weight: 4,
+  dimensions: { width: 15.14, height: 13.08, depth: 22.99 },
+  warrantyInformation: '1 week warranty',
+  shippingInformation: 'Ships in 3-5 business days',
   availabilityStatus: 'In Stock',
+  reviews: [sampleReviewDto],
+  returnPolicy: 'No return policy',
+  minimumOrderQuantity: 48,
+  meta: {
+    createdAt: '2025-10-09T14:47:01.588Z',
+    updatedAt: '2026-05-23T11:27:41.868Z',
+    barcode: '5784719087687',
+    qrCode: 'https://cdn.dummyjson.com/public/qr-code.png',
+  },
   images: ['https://cdn.dummyjson.com/product-images/beauty/essence/1.webp'],
 };
 
@@ -141,9 +163,24 @@ describe('ProductRepository.getProductById (data source + mapper)', () => {
       discountPercentage: 10.48,
       rating: 4.94,
       brand: 'Essence',
+      sku: 'BEA-ESS-ESS-001',
+      weight: 4,
+      dimensions: { width: 15.14, height: 13.08, depth: 22.99 },
+      warrantyInformation: '1 week warranty',
+      shippingInformation: 'Ships in 3-5 business days',
       stock: 99,
       availabilityStatus: 'In Stock',
+      returnPolicy: 'No return policy',
+      minimumOrderQuantity: 48,
       tags: ['beauty', 'mascara'],
+      reviews: [
+        {
+          rating: 3,
+          comment: 'Would not recommend!',
+          date: '2025-04-30T09:41:02.053Z',
+          reviewerName: 'Eleanor Collins',
+        },
+      ],
       imageUrl: sampleProductDetailsDto.images[0],
       images: sampleProductDetailsDto.images,
     });

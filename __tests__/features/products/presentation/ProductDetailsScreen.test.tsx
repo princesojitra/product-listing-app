@@ -36,9 +36,24 @@ const sampleProductDetails: ProductDetails = {
   category: 'beauty',
   rating: 4.5,
   brand: 'SampleBrand',
+  sku: 'BEA-SAM-001',
+  weight: 4,
+  dimensions: { width: 10, height: 20, depth: 5 },
+  warrantyInformation: '1 week warranty',
+  shippingInformation: 'Ships in 3-5 business days',
   stock: 42,
   availabilityStatus: 'In Stock',
+  returnPolicy: 'No return policy',
+  minimumOrderQuantity: 48,
   tags: ['beauty', 'mascara'],
+  reviews: [
+    {
+      rating: 4,
+      comment: 'Great product!',
+      date: '2025-04-30T09:41:02.053Z',
+      reviewerName: 'Liam Garcia',
+    },
+  ],
   imageUrl: 'https://dummyjson.com/images/products/1/thumbnail.webp',
   images: ['https://dummyjson.com/images/products/1/thumbnail.webp'],
 };
@@ -125,6 +140,23 @@ describe('ProductDetailsScreen', () => {
     expect(
       renderer.root.findByProps({ accessibilityLabel: 'Brand: SampleBrand' }),
     ).toBeTruthy();
+  });
+
+  it('displays SKU, dimensions, shipping/warranty/return policy, and reviews', async () => {
+    const getProductDetails = jest.fn().mockResolvedValue(sampleProductDetails);
+    const navigationRef = React.createRef<NavigationContainerRef<RootStackParamList>>();
+    const renderer = await navigateToDetails(getProductDetails, navigationRef);
+    await act(async () => {});
+
+    const texts = findAllText(renderer);
+    expect(texts).toContain('BEA-SAM-001');
+    expect(texts).toContain('10 × 20 × 5');
+    expect(texts).toContain('Ships in 3-5 business days');
+    expect(texts).toContain('1 week warranty');
+    expect(texts).toContain('No return policy');
+    expect(texts).toContain('Reviews (1)');
+    expect(texts).toContain('Liam Garcia');
+    expect(texts).toContain('Great product!');
   });
 
   it('shows the discounted price and original price when a discount applies', async () => {

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../app/navigation/types';
-import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
+import { useGlassScrollInsets, tabBarBottomPadding } from '../../../../app/navigation/shared/layoutInsets';
 import { Product } from '../../domain/models/Product';
 import { ProductFilters } from '../../domain/models/ProductFilters';
 import { applyProductFilters } from '../../domain/applyProductFilters';
@@ -94,7 +94,7 @@ export function ProductListScreen({ getProducts, filters }: ProductListScreenPro
           data={filteredData}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 72 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabBarBottomPadding(insets.bottom) }]}
           {...scrollInsetProps}
         />
       )}

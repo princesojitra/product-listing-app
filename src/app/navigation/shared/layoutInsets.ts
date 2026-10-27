@@ -40,3 +40,17 @@ export function useGlassScrollInsets(): {
       : {},
   };
 }
+
+/**
+ * How much extra bottom padding a screen under the tab bar needs, on top of
+ * the device's own safe-area inset. Only the real Liquid Glass tab bar
+ * (iOS 26+) is translucent and floats over content, so only it needs a
+ * screen to manually clear space for it — the opaque tab bar everywhere
+ * else (older iOS, Android) already reserves its own space natively, and
+ * adding this buffer there just pushes content up with a visible gap.
+ */
+const GLASS_TAB_BAR_OVERLAP = 72;
+
+export function tabBarBottomPadding(safeAreaBottomInset: number): number {
+  return safeAreaBottomInset + (isGlassHeaderActive ? GLASS_TAB_BAR_OVERLAP : 0);
+}

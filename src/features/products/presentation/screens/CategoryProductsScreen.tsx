@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CategoriesStackParamList } from '../../../../app/navigation/types';
-import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
+import { useGlassScrollInsets, tabBarBottomPadding } from '../../../../app/navigation/shared/layoutInsets';
 import { Product } from '../../domain/models/Product';
 import { GetProductsByCategory } from '../../domain/usecases/GetProductsByCategory';
 import { useProductsByCategory } from '../hooks/useProductsByCategory';
@@ -75,7 +75,7 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
           data={state.data}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 72 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: tabBarBottomPadding(insets.bottom) }]}
           {...scrollInsetProps}
         />
       )}

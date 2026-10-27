@@ -1,12 +1,73 @@
+/** Shape of a single entry in DummyJSON's `reviews` array. */
+export interface ProductReviewDto {
+  rating: number;
+  comment: string;
+  date: string;
+  reviewerName: string;
+  reviewerEmail: string;
+}
+
+function isProductReviewDto(value: unknown): value is ProductReviewDto {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.rating === 'number' &&
+    typeof candidate.comment === 'string' &&
+    typeof candidate.date === 'string' &&
+    typeof candidate.reviewerName === 'string' &&
+    typeof candidate.reviewerEmail === 'string'
+  );
+}
+
+/** Shape of DummyJSON's `dimensions` object. No unit is documented. */
+export interface ProductDimensionsDto {
+  width: number;
+  height: number;
+  depth: number;
+}
+
+function isProductDimensionsDto(value: unknown): value is ProductDimensionsDto {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.width === 'number' &&
+    typeof candidate.height === 'number' &&
+    typeof candidate.depth === 'number'
+  );
+}
+
+/** Shape of DummyJSON's `meta` object — catalog record-keeping, not shown in the UI. */
+export interface ProductMetaDto {
+  createdAt: string;
+  updatedAt: string;
+  barcode: string;
+  qrCode: string;
+}
+
+function isProductMetaDto(value: unknown): value is ProductMetaDto {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.createdAt === 'string' &&
+    typeof candidate.updatedAt === 'string' &&
+    typeof candidate.barcode === 'string' &&
+    typeof candidate.qrCode === 'string'
+  );
+}
+
 /**
  * Shape of the single-product response from DummyJSON's details endpoint
  * (`/products/{id}`). This is a genuinely different contract from the list
- * endpoint's `ProductDto` — it carries fields (`brand`, `stock`, `tags`,
- * `discountPercentage`, `availabilityStatus`, a full `images` gallery) that
- * `/products` never returns. Fields with no corresponding UI use —
- * `sku`, `weight`, `dimensions`, `warrantyInformation`, `shippingInformation`,
- * `returnPolicy`, `minimumOrderQuantity`, `reviews`, `meta` — are left
- * unmodeled rather than carried around unused.
+ * endpoint's `ProductDto` — it carries the full set of fields DummyJSON
+ * returns for one product, including fields the list endpoint never returns
+ * (`brand`, `stock`, `tags`, `discountPercentage`, `availabilityStatus`,
+ * a full `images` gallery, and the richer set below).
  */
 export interface ProductDetailsDto {
   id: number;
@@ -20,7 +81,17 @@ export interface ProductDetailsDto {
   tags: string[];
   /** DummyJSON omits this for some categories (e.g. groceries). */
   brand?: string;
+  sku: string;
+  /** DummyJSON does not document a unit for this field. */
+  weight: number;
+  dimensions: ProductDimensionsDto;
+  warrantyInformation: string;
+  shippingInformation: string;
   availabilityStatus: string;
+  reviews: ProductReviewDto[];
+  returnPolicy: string;
+  minimumOrderQuantity: number;
+  meta: ProductMetaDto;
   images: string[];
   thumbnail: string;
 }
@@ -49,7 +120,17 @@ export function isProductDetailsDto(value: unknown): value is ProductDetailsDto 
     typeof candidate.stock === 'number' &&
     Array.isArray(candidate.tags) &&
     (candidate.brand === undefined || typeof candidate.brand === 'string') &&
+    typeof candidate.sku === 'string' &&
+    typeof candidate.weight === 'number' &&
+    isProductDimensionsDto(candidate.dimensions) &&
+    typeof candidate.warrantyInformation === 'string' &&
+    typeof candidate.shippingInformation === 'string' &&
     typeof candidate.availabilityStatus === 'string' &&
+    Array.isArray(candidate.reviews) &&
+    candidate.reviews.every(isProductReviewDto) &&
+    typeof candidate.returnPolicy === 'string' &&
+    typeof candidate.minimumOrderQuantity === 'number' &&
+    isProductMetaDto(candidate.meta) &&
     Array.isArray(candidate.images) &&
     typeof candidate.thumbnail === 'string'
   );
