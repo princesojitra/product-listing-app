@@ -1,6 +1,6 @@
 # React Native Architecture Guide — PropertyListingApp
 
-A from-the-source walkthrough of this repository, written for an experienced iOS/Swift/UIKit/SwiftUI developer who is new to React Native. Every claim below was verified against the actual files in this repo on 2026-10-27; where something could not be verified (no such file, or behavior not implemented), that is stated explicitly rather than assumed.
+A from-the-source walkthrough of this repository, written for an experienced iOS/Swift/UIKit/SwiftUI developer who is new to React Native. Every claim below was verified against the actual files in this repo on 2026-10-28 (updated after the product/category UI redesign, the full product-details rewrite, and the category-product pagination feature landed); where something could not be verified (no such file, or behavior not implemented), that is stated explicitly rather than assumed.
 
 ## Executive Summary
 
@@ -150,6 +150,8 @@ property-listing-app/
 ├── __tests__/                     # Jest tests, mirrors src/ by feature/layer
 │   ├── App.test.tsx
 │   └── features/{auth,categories,products}/...
+│       # products/presentation/ includes useProductsByCategory.test.tsx,
+│       # a dedicated hook test for the pagination/race/concurrency behavior
 ├── android/                        # Native Android project (Kotlin, Gradle)
 │   └── app/src/main/java/com/propertylistingapp/
 │       ├── MainActivity.kt
@@ -178,7 +180,9 @@ property-listing-app/
     │   └── ui/
     │       ├── GlassBackground.tsx      # Liquid Glass surface / translucent fallback
     │       ├── GlassButton.tsx          # Secondary-action button, same glass/fallback split
-    │       └── Toast.tsx                # ToastProvider + useToast, app-wide status toasts
+    │       ├── Toast.tsx                # ToastProvider + useToast, app-wide status toasts
+    │       └── usePulseOpacity.ts       # Looping 0.4↔1 opacity Animated.Value, shared by
+    │                                    # every skeleton-loading placeholder
     ├── di/
     │   └── container.ts                # Composition root: wires HttpClient → data source →
     │                                    # repository → use cases, exported as `container`
@@ -192,12 +196,20 @@ property-listing-app/
         ├── categories/
         │   ├── domain/{models,repositories,usecases}/
         │   ├── data/{dto,mappers,datasources,repositories}/
-        │   ├── presentation/{hooks,screens}/
+        │   ├── presentation/
+        │   │   ├── hooks/, screens/
+        │   │   └── components/CategoryTileSkeleton.tsx   # Pulsing grid-tile placeholder
         │   └── index.ts
         └── products/
-            ├── domain/{models,repositories,usecases}/, applyProductFilters.ts
+            ├── domain/
+            │   ├── models/ (Product, ProductDetails, ProductFilters, ProductsPage, ...)
+            │   ├── repositories/, usecases/, applyProductFilters.ts
             ├── data/{dto,mappers,datasources,repositories}/
-            ├── presentation/{hooks,screens,components}/
+            ├── presentation/
+            │   ├── hooks/, screens/
+            │   └── components/
+            │       ├── ProductCard.tsx            # Shared list-row card
+            │       └── ProductCardSkeleton.tsx     # Pulsing placeholder for the same shape
             └── index.ts
 ```
 
@@ -220,7 +232,7 @@ Centralizes everything about *how screens are organized*, separate from the scre
 
 ### `src/core/`
 
-Cross-feature code with no feature-specific knowledge. `network/HttpClient.ts` is an interface, not an implementation — this is what lets `src/di/container.ts` be the only file that ever imports the real `fetch`-backed client, and what lets tests pass in a `jest.fn()`-based fake instead. `errors/isAbortError.ts` is a 3-line type guard, duplicated in spirit by nothing else, imported by every hook and every remote data source that needs to tell "the user navigated away" apart from "the request actually failed." `ui/` holds the three UI primitives shared across features: `GlassBackground` (used by `glassHeaderScreenOptions.tsx` as a header background), `GlassButton` (used by `AccountScreen`'s logout button and `ProductListScreen`/`ProductDetailsScreen`/`CategoriesScreen`/`CategoryProductsScreen`'s retry buttons, and `ProductFiltersScreen`'s apply button), and `Toast` (mounted once in `App.tsx`, consumed via `useToast()` by `useLogin` and `AccountScreen`).
+Cross-feature code with no feature-specific knowledge. `network/HttpClient.ts` is an interface, not an implementation — this is what lets `src/di/container.ts` be the only file that ever imports the real `fetch`-backed client, and what lets tests pass in a `jest.fn()`-based fake instead. `errors/isAbortError.ts` is a 3-line type guard, duplicated in spirit by nothing else, imported by every hook and every remote data source that needs to tell "the user navigated away" apart from "the request actually failed." `ui/` holds the shared UI primitives: `GlassBackground` (used by `glassHeaderScreenOptions.tsx` as a header background), `GlassButton` (used by `AccountScreen`'s logout button, every list/details screen's retry button(s), and `ProductFiltersScreen`'s apply button), `Toast` (mounted once in `App.tsx`, consumed via `useToast()` by `useLogin` and `AccountScreen`), and `usePulseOpacity` — a tiny hook (a looping `Animated.timing` sequence from opacity `0.4` to `1`) with no UI of its own, used by both `ProductCardSkeleton` and `CategoryTileSkeleton` so the "pulse" animation is written once rather than copy-pasted into each skeleton component.
 
 ### `src/di/container.ts`
 
@@ -395,8 +407,9 @@ Each feature folder has three layers. This is consistent across `auth`, `categor
 - **Props**: `{ getProducts: GetProducts; filters: ProductFilters }` — both injected by `ProductsNavigator`, neither created here.
 - **State and effects**: all fetch state lives in `useProducts` (external to this file); this screen only derives `filteredData` via `useMemo(() => applyProductFilters(...), [state, filters])` — a pure, synchronous re-filter, not a new fetch, whenever either the fetched data or the filter selection changes.
 - **Event handlers**: `renderItem`'s `onPress` navigates to `'ProductDetails'` with `{ productId: item.id }`; wrapped in `useCallback` keyed on `[navigation]` so `FlatList` doesn't get a new function identity every render.
-- **Rendering by state**: loading → centered `ActivityIndicator` + text; error → message + `GlassButton` "Retry" (calls `retry()` from the hook); success with `data.length === 0` → "No properties found right now" (server returned a genuinely empty list); success with data present but `filteredData.length === 0` → a *different* message, "No properties match these filters" (client-side filter is empty, data wasn't) — these are two distinct empty states, correctly distinguished.
-- **Reusable components**: `ProductCard`, `GlassButton`.
+- **Rendering by state**: loading → a column of four `ProductCardSkeleton` placeholders (not a spinner — see below) under an `accessibilityRole="progressbar"` wrapper; error → message + `GlassButton` "Retry" (calls `retry()` from the hook); success with `data.length === 0` → "No properties found right now" (server returned a genuinely empty list); success with data present but `filteredData.length === 0` → a *different* message, "No properties match these filters" (client-side filter is empty, data wasn't) — these are two distinct empty states, correctly distinguished.
+- **Loading placeholder**: [`ProductCardSkeleton`](../src/features/products/presentation/components/ProductCardSkeleton.tsx) mirrors `ProductCard`'s exact layout (image block, price/favorite row, title, category, description row) as flat gray `View`s, all pulsing together via the shared `usePulseOpacity()` hook — this replaced an earlier plain `ActivityIndicator` + text loading state, so a first-time visitor sees the shape of the content that's about to arrive rather than a generic spinner.
+- **Reusable components**: `ProductCard`, `ProductCardSkeleton`, `GlassButton`.
 - **Navigation**: pushes `'ProductDetails'`.
 ```tsx
 // src/features/products/presentation/screens/ProductListScreen.tsx
@@ -407,27 +420,38 @@ const filteredData = useMemo(
 ```
 This line is the entire "apply filters" feature: no second network call, no re-fetch on filter change — `applyProductFilters` is a pure in-memory sort/filter over data already loaded. The dependency array re-runs it only when the fetch result or the filter object changes, so toggling a filter is instant.
 
+**`ProductCard`, the shared row component** — [`src/features/products/presentation/components/ProductCard.tsx`](../src/features/products/presentation/components/ProductCard.tsx), used by both `ProductListScreen` and `CategoryProductsScreen`: an image with two overlay badges (a bottom-right "★ {rating}" pill, and a top-right "Top Rated" pill shown only when `product.rating >= 4.5`, a local `TOP_RATED_THRESHOLD` constant — not a server-provided flag), then a body with a price/favorite-heart row, the title, the category, and a description row prefixed with a small `MaterialIcons` "description" glyph. The heart (`favorite`/`favorite-border` `MaterialIcons`, toggled by a local `isFavorited` `useState`) is **purely local, per-card UI state with no persistence and no backing feature** — tapping it flips the icon and nothing else; there is no `Favorites` domain model, repository, or use case anywhere in the codebase (confirmed by inspecting `src/features/products/domain/`), so don't mistake it for a real feature when reading the code.
+
 ### ProductDetailsScreen — [`src/features/products/presentation/screens/ProductDetailsScreen.tsx`](../src/features/products/presentation/screens/ProductDetailsScreen.tsx)
 
-- **Responsibility**: fetch and render one product's full details, shared verbatim between the Products and Categories tab stacks.
-- **Props**: `NativeStackScreenProps<{ ProductDetails: ProductDetailsParams }, 'ProductDetails'> & { getProductDetails: GetProductDetails }` — deliberately typed against a **minimal, single-route param list** rather than either parent stack's full `RootStackParamList`/`CategoriesStackParamList`, so the same component compiles against both navigators (see Section 6).
-- **State and effects**: `imageFailed` (local `useState`, reset via a `useEffect` keyed on `[productId]` so a new product gets a fresh chance to load its image); a second `useEffect` keyed on `[state, navigation]` calls `navigation.setOptions({ title: state.data.title })` once the fetch succeeds — the header title isn't known at navigation time (only the id is passed), so it's set reactively after load.
-- **Event handlers**: `Image`'s `onError` sets `imageFailed`; `GlassButton`'s retry.
-- **Rendering by state**: loading/error/success, same three-way split as every other data screen; no explicit empty state (a product either exists or the fetch errors — DummyJSON returns either a real product or a 404/malformed body, both of which `useProductDetails` turns into the `'error'` state).
-- **What's implemented well**: discount math is done inline (`price * (1 - discountPercentage / 100)`) and only rendered when `discountPercentage > 0`, so a product with no discount just shows a plain price — a real conditional-UI branch, not a hidden `0%` badge.
+This screen was substantially rewritten to surface the *entire* DummyJSON product record (previously only title/description/price/discount/category/rating/brand/stock/availability/tags/images were modeled — see Section 7 for the data-layer side of this change). It is still the one screen shared verbatim between the Products and Categories tab stacks, typed the same minimal way as before: `NativeStackScreenProps<{ ProductDetails: ProductDetailsParams }, 'ProductDetails'> & { getProductDetails: GetProductDetails }`.
+
+- **Image carousel** — a local `ImageCarousel` component (defined in the same file, not exported) wraps a horizontal, `pagingEnabled` `FlatList` over `state.data.images` (now guaranteed non-empty by the mapper's `images.length > 0 ? images : [thumbnail]` fallback). Each slide is rendered by a local `ImageSlide` component: it shows a pulsing gray placeholder (`usePulseOpacity()`) until the `Image`'s `onLoad` fires, and swaps to an "Image unavailable" fallback `View` on `onError` — the exact same loading/error split every other image in the app uses, just per-slide instead of per-screen. `ImageCarousel` tracks `activeIndex` via `onScroll`'s `contentOffset.x` divided by the (measured, via `useWindowDimensions`) screen width, and renders three overlays: a "{current} / {total}" counter top-right and a row of dot indicators bottom-center (both only when there's more than one image), and a "★ {rating}" badge bottom-right (always shown). There is **no discount badge on the image** — an earlier version paired a "-N%" badge with the rating top-right, but it was removed because it duplicated the discount badge already shown inline next to the price below; the two badges competing for the same corner was also the reason the rating badge moved to the opposite corner (bottom-right) instead of sharing the top with the page counter.
+- **Price row**: current price, the strikethrough original price, and the discount badge render **inline on one row** (`styles.priceRow`) when `discountPercentage > 0`; a plain price `Text` otherwise. This replaced an earlier two-line layout (price on its own line, discount details stacked under it).
+- **Chips row** (`styles.chipsRow`, directly under the price): the Category badge (same pastel-indigo pill as the rest of the app) and an Availability badge side by side — the Availability badge is new: a colored dot plus colored text on a tinted pill background, the tint/color pair chosen by `availabilityBackground`/`availabilityColor` (green and `#dcfce7` for "In Stock", amber and `#fef3c7` for "Low Stock", red and `#fee2e2` for "Out of Stock"), replacing a plain colored `Text` label.
+- **Tags**: `state.data.tags` filtered to drop any tag that case-insensitively matches the category (so a "beauty"-category product tagged "beauty" doesn't show that word twice), then rendered as a **single muted gray text line** (`"tag1  ·  tag2"`, `styles.tagsRow`/`tagsRowText`) with a small `local-offer` `MaterialIcons` glyph in front — not as individual pill chips. An earlier iteration rendered each remaining tag as its own colored, then gray, pill; both were dropped because mixing colorful status badges with multiple separate pill boxes in one wrapping row read as cluttered, and a lone wrapped-to-its-own-line pill looked orphaned. Plain text wraps far more gracefully.
+- **"Product details" and "Shipping & returns" cards**: two `styles.sectionCard` `View`s (white background, `borderRadius: 16`, a subtle `borderWidth: 1`/`#e5e7eb` border, and a small shadow), each built from a local `DetailRow({ icon, label, value, last? })` component — an icon, a label, and a right-aligned value, with a hairline bottom border on every row except the last (`!last && styles.detailRowBorder`). "Product details" lists SKU, Stock, Min. order, Weight, and Dimensions (formatted `"{width} × {height} × {depth}"`); "Shipping & returns" lists Shipping, Warranty, and Returns. **Weight and dimensions are shown as bare numbers with no invented unit** — DummyJSON documents no unit for either field, and the DTO file says so explicitly in a comment; the report (and the code) deliberately does not guess "g" or "cm".
+- **Reviews section**: a header row showing `"Reviews ({state.data.reviews.length})"` alongside a `"★ {rating} / 5"` summary (this rating+count line used to sit up near the top, next to Availability, but was moved down here specifically so it sits beside the thing it's summarizing), followed by one `ReviewCard` per `state.data.reviews` entry — reviewer name, a star string from a local `reviewStars(rating)` helper (`'★'.repeat(full) + '☆'.repeat(5 - full)`), the comment, and a date formatted via `Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' })`. `reviewerEmail` (present in the DTO) is dropped by the mapper and never reaches this screen — it's PII with no display use.
+- **State and effects**: `navigation.setOptions({ title: state.data.title })` still fires in a `useEffect` keyed on `[state, navigation]` once the fetch succeeds, same as before — the header title isn't known at navigation time, only the id is. Each `ImageSlide` owns its own `status: 'loading' | 'loaded' | 'error'` `useState`, local to that slide (switching products via the carousel, or re-fetching, remounts the slides and resets this naturally).
+- **Rendering by state**: the outer loading/error/success three-way split (and the `ActivityIndicator` + "Loading details…" loading state) is **unchanged** from before — this screen's own first-load state was not converted to a skeleton placeholder, unlike `ProductListScreen`/`CategoryProductsScreen`/`CategoriesScreen`.
+- **What's implemented well**: discount math is still done inline (`price * (1 - discountPercentage / 100)`) and only rendered when `discountPercentage > 0`; the Availability badge's color/background pairing is driven by the same `availabilityStatus` string in both places, so the dot, the text, and the background tint can never disagree with each other.
 
 ### CategoriesScreen — [`src/features/categories/presentation/screens/CategoriesScreen.tsx`](../src/features/categories/presentation/screens/CategoriesScreen.tsx)
 
-- **Responsibility**: list all product categories as a navigable list.
+- **Responsibility**: list all product categories as a 2-column grid of tiles.
 - **Props**: `{ getCategories: GetCategories }`.
-- **Notable detail**: `accentFor(slug)` is a small deterministic hash (`hash = (hash * 31 + charCode) % ACCENTS.length`) picking one of six pastel color pairs per category — purely cosmetic, computed fresh on every render (not memoized), which is fine at this list size but worth knowing as a (very small) re-render cost if this list ever grows large.
+- **Tile design**: each tile is a `Pressable` with a pastel `backgroundColor` and a matching, more-saturated `borderColor` (`accentFor(index)` now returns `{ bg, border, fg }`, cycled by the item's position — not hashed from the slug — so no two *adjacent* tiles share a color; the previous hash-based version could coincidentally repeat colors next to each other), a decorative oversized "blob" circle in one corner (`styles.tileBlob`, a semi-transparent white circle, positioned to peek out from behind the icon), a circular white "icon badge" (`styles.tileIconBadge`) containing a full-color **emoji** (not a `MaterialIcons` glyph), and the category name in bold navy text below. `emojiFor(slug)` looks the slug up in a `CATEGORY_EMOJIS` map (e.g. `beauty: '💄'`, `fragrances: '🌸'`, `laptops: '💻'`) with a `'🏷️'` fallback for any category DummyJSON might add that isn't in the map. Emoji were chosen specifically because they render as full-color system glyphs with no icon font or image asset needed, reading closer to a small illustrated sticker than a flat line icon does.
+- **Loading placeholder**: [`CategoryTileSkeleton`](../src/features/categories/presentation/components/CategoryTileSkeleton.tsx) — a white tile (matching border/radius) with a gray circle and a gray bar, pulsing via the same shared `usePulseOpacity()` hook `ProductCardSkeleton` uses, replacing an earlier plain `ActivityIndicator` loading state. Six of them render (three rows of two) while the category list loads.
 - **Navigation**: pushes `'CategoryProducts'` with `{ categorySlug, categoryName }` — passing the *name* along to avoid CategoryProductsScreen needing its own round trip just to set a header title (contrast with `ProductDetailsScreen`, which has no such shortcut available and must wait for its own fetch).
 
 ### CategoryProductsScreen — [`src/features/products/presentation/screens/CategoryProductsScreen.tsx`](../src/features/products/presentation/screens/CategoryProductsScreen.tsx)
 
-- **Responsibility**: product list scoped to one category; structurally almost identical to `ProductListScreen` but with no filter support and no `applyProductFilters` call — it renders `state.data` directly.
-- **Props**: `NativeStackScreenProps<CategoriesStackParamList, 'CategoryProducts'> & { getProductsByCategory: GetProductsByCategory }`.
-- **What to study further**: this screen and `ProductListScreen` share nearly all their JSX/styles (loading/error/empty/list rendering, down to identical `StyleSheet` objects) but share zero code — a candidate for extraction if a third near-identical list screen appears (see Section 16).
+- **Responsibility**: product list scoped to one category, now with **infinite-scroll pagination** — structurally close to `ProductListScreen` but with no filter support and no `applyProductFilters` call; it renders `state.data` directly, appended to as more pages load.
+- **Props**: `NativeStackScreenProps<CategoriesStackParamList, 'CategoryProducts'> & { getProductsByCategory: GetProductsByCategory }` — `getProductsByCategory`'s type (`GetProductsByCategory`) gained `limit`/`skip` parameters and now returns a `ProductsPage` (`{ products, total }`) rather than a bare array; see Section 7 for the full pagination trace.
+- **State**: `useProductsByCategory(categorySlug, getProductsByCategory)` returns the original `{ state, retry }` plus four new values — `loadMore` (a function), `isLoadingMore` (`boolean`), `loadMoreError` (`string | null`), and `hasMore` (`boolean`, unused directly by this screen but available). The screen itself holds no pagination state of its own; all of it lives in the hook (Section 7/16).
+- **Infinite scroll wiring**: the `FlatList` has `onEndReached={loadMore}` and `onEndReachedThreshold={0.5}` (fires when the user has scrolled within half a screen-height of the end), plus a `ListFooterComponent={renderFooter}` — a small `useCallback`-memoized function that renders a centered `ActivityIndicator` while `isLoadingMore`, or (if `loadMoreError` is set) the error message plus a `GlassButton` "Retry" that just calls `loadMore()` again. When neither is true, the footer renders `null`.
+- **First-page loading/error/empty rendering**: unchanged from before — a column of `ProductCardSkeleton` placeholders while `state.status === 'loading'`, `GlassButton` retry on `state.status === 'error'`, and the "No products found in this category" message when `state.status === 'success'` with an empty list. These are about the *first* page only; a failure loading page 2+ surfaces through the footer instead, never replacing the already-loaded list (Section 12).
+- **What to study further**: this screen and `ProductListScreen` still share nearly all their first-page JSX/styles (loading/error/empty rendering, down to near-identical `StyleSheet` objects) despite sharing zero code between them — a long-standing candidate for extraction, now joined by the fact that neither screen's *pagination* logic is shared either (only `CategoryProductsScreen` paginates; `ProductListScreen` still fetches a single fixed page of 10 and stops) — see Section 16.
 
 ### AccountScreen — [`src/features/auth/presentation/screens/AccountScreen.tsx`](../src/features/auth/presentation/screens/AccountScreen.tsx)
 
@@ -579,9 +603,67 @@ ProductListScreen re-renders → useMemo(applyProductFilters) → FlatList rende
 - **Retry**: `useProducts` exposes `retry()`, which just increments a `retryCount` state value that's in the effect's dependency array — bumping it is the *only* thing that re-runs the fetch effect; there's no separate retry-specific code path.
 - **Error/loading states**: three-state union (`'loading' | 'success' | 'error'`) rendered directly by the screen (Section 5), not stored anywhere beyond the hook's local `useState`.
 
-### Trace: Product details, Categories, Category products
+### Trace: Product details, Categories
 
-Structurally identical to the above, each with its own hook (`useProductDetails`, `useCategories`, `useProductsByCategory`) and its own use case (`GetProductDetails`, `GetCategories`, `GetProductsByCategory`), differing only in: `useProductDetails` and `useProductsByCategory` add their id/slug parameter to the effect's dependency array (so changing the selected product/category correctly cancels the stale request and starts a fresh one — confirmed by reading the dependency arrays directly), and `GetProductDetails`'s underlying endpoint is `GET https://dummyjson.com/products/{id}` with a pre-flight regex guard (`isValidProductId`, `/^\d+$/`) rejecting non-numeric ids before a request is even attempted. Categories hits `GET https://dummyjson.com/products/categories` (a bare array response, not the `{products, total, skip, limit}` envelope the product-list endpoints share) and category-products hits `GET https://dummyjson.com/products/category/{slug}`.
+Structurally identical to the product-list trace above, each with its own hook (`useProductDetails`, `useCategories`) and its own use case (`GetProductDetails`, `GetCategories`), differing only in: `useProductDetails` adds the product id to the effect's dependency array (so switching the selected product correctly cancels the stale request and starts a fresh one), and `GetProductDetails`'s underlying endpoint is `GET https://dummyjson.com/products/{id}` with a pre-flight regex guard (`isValidProductId`, `/^\d+$/`) rejecting non-numeric ids before a request is even attempted. Categories hits `GET https://dummyjson.com/products/categories` (a bare array response, not the `{products, total, skip, limit}` envelope the product-list endpoints share).
+
+### Trace: Category products — paginated
+
+This is the one endpoint in the app with real pagination, and the request/response shape is genuinely different from every other trace in this document, so it gets its own walkthrough.
+
+**Data layer.** `ProductRemoteDataSource.getProductsByCategory(categorySlug, limit, skip, signal?)` builds `GET https://dummyjson.com/products/category/{slug}?limit={limit}&skip={skip}` and returns `{ products, total }` — a `ProductsPageDto` — instead of a bare array. It shares its validation with the plain product list via the same internal `fetchProductsList` helper, which now always returns `{ products, total }`; `getProducts()` (the un-paginated list) just destructures `.products` and ignores `total`. `isProductsResponseDto` was tightened to also check `typeof candidate.total === 'number'` (previously it only checked that `products` was an array), since pagination now genuinely depends on that field being present and numeric. `ProductRepositoryImpl.getProductsByCategory` maps the DTO page into a domain `ProductsPage` (`{ products: Product[]; total: number }`, [`src/features/products/domain/models/ProductsPage.ts`](../src/features/products/domain/models/ProductsPage.ts)); `GetProductsByCategory` is, as with every other use case, a direct pass-through.
+
+**`useProductsByCategory`'s pagination state.** The hook's existing `{ status: 'loading' | 'success' | 'error' }` union is untouched (so `CategoryProductsScreen`'s first-page rendering needed zero changes) — pagination is four *additional* pieces of state layered on top: `total` (`useState<number>`, reset to `0` whenever the category changes or `retry()` fires), `isLoadingMore`/`loadMoreError`, and `loadMore()`, a `useCallback`. The next page's `skip` is never tracked as its own variable — it's simply `state.data.length`, since "how many products are loaded" and "where the next page starts" are always the same number by construction (a successful page append only ever adds to the end, in order). `PAGE_SIZE` is a module-level `const` set to `10`, matching the plain product list's existing `?limit=10`.
+
+```ts
+// src/features/products/presentation/hooks/useProductsByCategory.ts
+const loadMore = useCallback(() => {
+  if (state.status !== 'success' || isLoadingMoreRef.current || state.data.length >= total) {
+    return;
+  }
+  const requestedCategory = categorySlugRef.current;
+  const skip = state.data.length;
+  // ...fetch PAGE_SIZE starting at skip, append on success...
+}, [state, total, getProductsByCategory]);
+```
+
+**Concurrency and staleness guards** (the part worth reading carefully, since none of this is visible from the UI):
+- `isLoadingMoreRef` (a `useRef<boolean>`, not state) is checked *and* set synchronously at the top of `loadMore`, before any `setState` is scheduled. This is what actually stops a `FlatList` that fires `onEndReached` more than once in the same tick (common during fast scrolling) from starting two requests for the same page — a `useState`-based `isLoadingMore` flag alone couldn't guarantee this, because its updated value isn't visible to a second synchronous call until after a re-render.
+- `categorySlugRef` is a ref kept in sync with the `categorySlug` prop on every render (`categorySlugRef.current = categorySlug`, written directly in the component body — not in an effect, since it just needs to mirror the latest prop, not react to its changes). `loadMore` captures the category it was called for (`categorySlugRef.current` at call time) and compares it against `categorySlugRef.current` again when the response arrives; if the user has since switched categories, the response is discarded instead of appending onto the new category's list.
+- `loadMoreControllerRef` holds the `AbortController` for the in-flight "load more" request. The first-page effect's cleanup function — which already runs on category change or unmount — also aborts this controller, so switching away from a category genuinely cancels a page-2+ request in flight, not just ignores its eventual result.
+- A failed `loadMore` sets `loadMoreError` but never touches `total` or appends anything to `state.data` — so the next call to `loadMore` (via the footer's "Retry" button) computes the exact same `skip` and retries the exact same page.
+
+**Sequence** (first page, then one `loadMore`):
+
+```mermaid
+sequenceDiagram
+    participant Screen as CategoryProductsScreen
+    participant Hook as useProductsByCategory
+    participant UC as GetProductsByCategory
+    participant Repo as ProductRepositoryImpl
+    participant DS as ProductRemoteDataSource
+    participant API as dummyjson.com
+
+    Screen->>Hook: useProductsByCategory(categorySlug, getProductsByCategory)
+    Hook->>UC: getProductsByCategory(categorySlug, 10, 0, signal)
+    UC->>Repo: repository.getProductsByCategory(categorySlug, 10, 0, signal)
+    Repo->>DS: dataSource.getProductsByCategory(categorySlug, 10, 0, signal)
+    DS->>API: GET /products/category/{slug}?limit=10&skip=0
+    API-->>DS: 200 + {products, total}
+    DS-->>Repo: {products: ProductDto[], total}
+    Repo-->>UC: ProductsPage {products: Product[], total}
+    UC-->>Hook: ProductsPage
+    Hook->>Hook: setState({status:'success', data: products}); setTotal(total)
+    Screen->>Screen: FlatList renders ProductCard[], user scrolls near the end
+    Screen->>Hook: onEndReached → loadMore()
+    Hook->>Hook: isLoadingMoreRef.current = true; setIsLoadingMore(true)
+    Hook->>UC: getProductsByCategory(categorySlug, 10, state.data.length, signal)
+    UC->>Repo: ...same chain...
+    Repo-->>Hook: ProductsPage {products: nextPage, total}
+    Hook->>Hook: setState(current => ({status:'success', data: [...current.data, ...nextPage]}))
+    Hook->>Hook: isLoadingMoreRef.current = false; setIsLoadingMore(false)
+    Screen->>Screen: footer spinner disappears, new cards appended
+```
 
 ### Trace: Authentication
 
@@ -603,9 +685,9 @@ Concepts **actually used** in this codebase (confirmed by file-by-file inspectio
 - **`useState`** — used everywhere a screen needs to remember something across renders: `LoginScreen`'s form fields, every data-fetching hook's `{status, data|message}` union, `ProductsNavigator`'s current `ProductFilters`. Comparable to SwiftUI's `@State`, with one real difference worth flagging: React's state setter from `useState` is *not* synchronous and triggers a re-render rather than mutating in place — closer in spirit to `@State` than to a plain Swift `var`, since both exist specifically to trigger a UI update, but importantly **the functional updater form** (`setState(current => ...)`, used in `AuthContext`'s restore-session effect, `useToast`'s auto-increment, every data hook's `retry()`) exists precisely because two state updates can be batched/reordered and the callback form reads the latest value rather than a captured stale one.
 - **`useEffect`** — used for every side effect tied to a component's lifecycle: data fetching (all four data hooks), `AuthProvider`'s session-restore-on-mount, `ProductDetailsScreen`'s header-title-after-load and image-reset-per-product, `ToastProvider`'s timeout cleanup. **Cleanup functions** (the function an effect returns) are used correctly everywhere cancellation matters (`isActive = false; controller.abort();`). There is no SwiftUI 1:1 equivalent — the nearest analogues are `.onAppear`/`.onDisappear`/`.onChange(of:)` combined, but `useEffect`'s dependency-array re-run semantics (re-running the whole effect, including its cleanup, whenever any listed value changes) have no single SwiftUI modifier that behaves identically.
 - **`useMemo`** — exactly one use in the whole app: `ProductListScreen`'s `filteredData` (Section 7). Recomputes `applyProductFilters(...)` only when `state` or `filters` actually changes, avoiding a pointless re-sort on every unrelated re-render (e.g. a parent re-render from navigation state changing).
-- **`useCallback`** — used for `FlatList`'s `renderItem` in `ProductListScreen` and `CategoryProductsScreen`, and `CategoriesScreen`'s `renderItem` — stabilizing a function's identity across renders so it doesn't look "new" to `FlatList`'s own internal memoization on every parent re-render. `LoginScreen`'s submit handler is **not** wrapped in `useCallback` — a deliberate (if implicit) choice since it's a simple inline `Pressable.onPress`, not passed into a memoized list.
-- **`useRef`** — used in `Toast.tsx` for the `Animated.Value` instance and the pending `setTimeout` handle, both values that must persist across renders *without* causing a re-render when they change (the opposite of `useState`). No SwiftUI equivalent exists as cleanly — closest is holding a reference type (a class instance) in a `@State` wrapper, or `UIViewRepresentable`'s `Coordinator`.
-- **Custom hooks** — `useLogin`, `useProducts`, `useProductDetails`, `useProductsByCategory`, `useCategories`, `useAuth`, `useToast`, `useOptionalHeaderHeight`, `useGlassScrollInsets` — all plain functions whose names start with `use`, composing the primitives above into a reusable unit. This is the app's substitute for a dedicated "ViewModel" class/protocol: each data-fetching hook plays exactly that role (owns state, runs an effect, exposes actions) without being named one.
+- **`useCallback`** — used for `FlatList`'s `renderItem` in `ProductListScreen` and `CategoryProductsScreen`, and `CategoriesScreen`'s `renderItem` — stabilizing a function's identity across renders so it doesn't look "new" to `FlatList`'s own internal memoization on every parent re-render. `CategoryProductsScreen` also wraps its `renderFooter` (the loading-more spinner / retry-on-error footer) in `useCallback`, since it closes over `isLoadingMore`/`loadMoreError`/`loadMore` and is passed to `FlatList` as `ListFooterComponent`. `LoginScreen`'s submit handler is **not** wrapped in `useCallback` — a deliberate (if implicit) choice since it's a simple inline `Pressable.onPress`, not passed into a memoized list.
+- **`useRef`** — used in `Toast.tsx` for the `Animated.Value` instance and the pending `setTimeout` handle, both values that must persist across renders *without* causing a re-render when they change (the opposite of `useState`). `useProductsByCategory` uses the same property for its three concurrency/staleness guards (`isLoadingMoreRef`, `categorySlugRef`, `loadMoreControllerRef` — Section 7). No SwiftUI equivalent exists as cleanly — closest is holding a reference type (a class instance) in a `@State` wrapper, or `UIViewRepresentable`'s `Coordinator`.
+- **Custom hooks** — `useLogin`, `useProducts`, `useProductDetails`, `useProductsByCategory`, `useCategories`, `useAuth`, `useToast`, `useOptionalHeaderHeight`, `useGlassScrollInsets`, `usePulseOpacity` — all plain functions whose names start with `use`, composing the primitives above into a reusable unit. This is the app's substitute for a dedicated "ViewModel" class/protocol: each data-fetching hook plays exactly that role (owns state, runs an effect, exposes actions) without being named one. `usePulseOpacity` is the odd one out — not a ViewModel but a shared *view-layer* hook (a looping `Animated.timing` 0.4↔1 opacity value), reused by `ProductCardSkeleton` and `CategoryTileSkeleton` so both loading placeholders pulse identically without duplicating the animation.
 - **Conditional rendering** — `{state.status === 'error' && <Text>...</Text>}` and ternaries (`imageFailed ? <Fallback/> : <Image/>`) throughout; no `switch`-based rendering helper exists (each screen repeats the same `status === '...' &&` pattern rather than factoring it into a shared `<AsyncState>` component — see Section 16).
 - **Lists/keys** — every `FlatList` has an explicit `keyExtractor` (`item => item.id` / `item => item.slug`), never relying on array index.
 - **Event handlers** — `onPress`, `onChangeText`, `onError` (on `Image`, for broken image URLs) throughout.
@@ -625,8 +707,8 @@ Concepts **actually used** in this codebase (confirmed by file-by-file inspectio
 
 - **Component props**: plain `interface`s, e.g. `ProductCardProps`, `GlassButtonProps`, `FilterButtonProps` — no prop-types library, no runtime prop validation (TypeScript's checking is compile-time only).
 - **Navigation param lists**: `RootStackParamList`, `CategoriesStackParamList`, `AccountStackParamList`, `RootTabParamList` (Section 6) — each route name mapped to either `undefined` (no params) or an object type.
-- **API request/response types**: the DTO interfaces (`ProductDto`, `ProductsResponseDto`, `ProductDetailsDto`, `CategoryDto`, `LoginResponseDto`, `CurrentUserResponseDto`, `RefreshResponseDto`) — these describe exactly what DummyJSON's wire format looks like, deliberately kept separate from the domain models they map into.
-- **Domain/UI models**: `Product`, `ProductDetails`, `Category`, `AuthUser`, `AuthSession`, `AuthTokens`, `ProductFilters`.
+- **API request/response types**: the DTO interfaces (`ProductDto`, `ProductsResponseDto`, `ProductDetailsDto`, `ProductReviewDto`, `ProductDimensionsDto`, `ProductMetaDto`, `CategoryDto`, `LoginResponseDto`, `CurrentUserResponseDto`, `RefreshResponseDto`) — these describe exactly what DummyJSON's wire format looks like, deliberately kept separate from the domain models they map into. `ProductDetailsDto` now mirrors the *entire* `/products/{id}` response, including `ProductMetaDto` (`createdAt`, `updatedAt`, `barcode`, `qrCode`) — which is validated at the DTO boundary (so a malformed `meta` object still fails the response-shape check) but deliberately **not** carried into `ProductDetails` or shown anywhere, since it's catalog record-keeping rather than shopper-facing data.
+- **Domain/UI models**: `Product`, `ProductDetails`, `ProductDimensions`, `ProductReview`, `ProductsPage`, `Category`, `AuthUser`, `AuthSession`, `AuthTokens`, `ProductFilters`. `ProductsPage` (`{ products: Product[]; total: number }`) is the newest addition — the return type of the one paginated repository method, `ProductRepository.getProductsByCategory` (Section 7).
 - **Unions**: `ProductsState`/`CategoriesState`/etc. (`{status:'loading'} | {status:'success';data:T} | {status:'error';message:string}`), `LoginFormState`, `AuthState`, `ProductSortOption` (`'default' | 'priceAsc' | 'priceDesc' | 'ratingDesc'`) — TypeScript's **discriminated unions**, narrowed via the shared `status`/tag field; no `enum` keyword is used anywhere in the app's own source (TypeScript `enum`s are a separate, heavier feature the codebase doesn't reach for — string-literal unions do the same job here).
 - **Optional/nullability**: `ProductDetails.brand: string | null` (explicit null, mapped from an optional DTO field via `dto.brand ?? null`) versus `ProductDetailsDto.brand?: string` (optional/possibly-`undefined`, the wire format's own looseness) — a deliberate, visible distinction between "the API might omit this" (`?:`) and "the domain says this is meaningfully absent" (`| null`).
 - **Type inference**: most local variables and `useState` calls rely on inference (`const [username, setUsername] = useState('')` infers `string`) rather than explicit annotations; explicit generic type arguments are used specifically where inference can't reach far enough alone (`useState<ProductsState>({status:'loading'})`, `createNativeStackNavigator<RootStackParamList>()`).
@@ -732,6 +814,7 @@ Flexbox-based layout (`flex`, `flexDirection`, `justifyContent`, `alignItems`) i
 | Loading state | A dedicated `'loading'` union member in every async hook's state, rendered as a centered `ActivityIndicator` | all data hooks + their screens |
 | Invalid credentials | Specific message surfaced from the 400/401 branch, rendered in `LoginScreen` | `AuthRemoteDataSource.login`, `useLogin`, `LoginScreen` |
 | Product detail retry | `useProductDetails` exposes `retry()`; `ProductDetailsScreen` renders a `GlassButton` calling it on error | `useProductDetails.ts`, `ProductDetailsScreen.tsx` |
+| Pagination page-2+ failure (`loadMore`) | Already-loaded products and the current `skip` offset are **preserved** (the failure only sets `loadMoreError`, it never clears `state`); `CategoryProductsScreen`'s footer swaps to the error text plus a "Retry loading more products" `GlassButton` that re-invokes `loadMore()` at the same offset | `useProductsByCategory.ts`, `CategoryProductsScreen.tsx` |
 | Unmounting during a request | `AbortController.abort()` in every effect's cleanup + an `isActive` flag guarding the `.then`/`.catch` callbacks | every data-fetching hook |
 | Duplicate requests (e.g. double-tap submit, rapid filter toggling) | `useLogin` explicitly guards (`if (state.status === 'loading') return;`); data hooks don't need an explicit guard since each depends only on its own `retryCount`/id, and a new effect run aborts the prior one anyway; `RefreshSession` explicitly **coalesces concurrent refresh calls** into one shared in-flight promise | `useLogin.ts`, `RefreshSession.ts` |
 | Network timeouts | **Not implemented** — no explicit timeout is ever set on any `fetch` call (no `AbortSignal.timeout(...)` or manual timer); a hung request will simply never resolve/reject until the OS or server gives up | confirmed absent from every `*RemoteDataSource.ts` |
@@ -808,7 +891,7 @@ Navigation action (`navigate('ProductDetails', {productId})`) → React Navigati
 
 ### D) Category navigation
 
-`CategoriesScreen` (`useCategories` → `GetCategories` → `CategoryRepositoryImpl` → `CategoryRemoteDataSource` → `GET /products/categories`) renders a list → tapping an item calls `navigation.navigate('CategoryProducts', {categorySlug, categoryName})` → `CategoryProductsScreen` mounts, `useProductsByCategory(categorySlug, getProductsByCategory)` fires (`GET /products/category/{slug}`) → tapping a product card calls `navigation.navigate('ProductDetails', {productId})`, mounting the **same** `ProductDetailsScreen` component used by the Products tab, now as a route inside `CategoriesNavigator`'s own stack rather than `ProductsNavigator`'s.
+`CategoriesScreen` (`useCategories` → `GetCategories` → `CategoryRepositoryImpl` → `CategoryRemoteDataSource` → `GET /products/categories`) renders a list → tapping an item calls `navigation.navigate('CategoryProducts', {categorySlug, categoryName})` → `CategoryProductsScreen` mounts, `useProductsByCategory(categorySlug, getProductsByCategory)` fires the **first page** (`GET /products/category/{slug}?limit=10&skip=0`) → scrolling to the bottom of the `FlatList` triggers `onEndReached` → `loadMore()` fires a second page at `skip=10` and the two pages are appended into one list (full guard/staleness details and a sequence diagram are in Section 7's "Trace: Category products — paginated") → tapping a product card calls `navigation.navigate('ProductDetails', {productId})`, mounting the **same** `ProductDetailsScreen` component used by the Products tab, now as a route inside `CategoriesNavigator`'s own stack rather than `ProductsNavigator`'s.
 
 ### E) Login/logout
 
@@ -866,6 +949,7 @@ sequenceDiagram
 - `jest.config.js` widens `transformIgnorePatterns` so React Navigation, `react-native-screens`, `react-native-bottom-tabs`/`@bottom-tabs`, and the `color`/`color-string`/`color-convert`/`color-name` chain (a `react-native-bottom-tabs` transitive dependency) get Babel-transformed, since they ship untranspiled ESM in `node_modules`; it also adds a font-file (`.ttf`/`.otf`/`.woff`/`.woff2`) asset transformer alongside the preset's existing image-asset stub, since `@react-native-vector-icons` requires a font file at import time.
 - Two Jest **manual mocks** exist, both for native-backed modules with no implementation available in the Jest (Node, no simulator) environment: `__mocks__/@callstack/liquid-glass.js` (`isLiquidGlassSupported: false`, `LiquidGlassView: View`) and `__mocks__/react-native-inappbrowser-reborn.js` (`InAppBrowser.open`/`isAvailable` as resolved `jest.fn()`s). **No mock exists for `react-native-webview`** — nothing in the current source imports it, so none is needed (a flag raised going into this review turned out not to apply to the code as it stands today).
 - Test files mirror `src/` by feature and layer: `__tests__/features/{auth,categories,products}/{domain,data,presentation}/*.test.{ts,tsx}`, plus a root `__tests__/App.test.tsx` smoke test (mounts the whole `<App />` and asserts it renders without throwing).
+- Pagination is covered at both the hook and screen level: `useProductsByCategory.test.tsx` exercises the hook directly (first-page `limit`/`skip` params, appending subsequent pages, the `isLoadingMoreRef` duplicate-call guard, a failed `loadMore` preserving state and allowing retry, and the `categorySlugRef` stale-response guard on a category switch via `AbortController`), and `CategoryProductsScreen.test.tsx` adds five more cases through the rendered screen (`onEndReached` loading/appending the next page, no further request once every product is loaded, no duplicate request from rapid `onEndReached` firing, and the load-more error/retry footer).
 - **Dependency injection in tests**: every use case/repository is a plain function/object, so tests construct fakes directly (`jest.fn()` standing in for a `GetProducts`, a hand-written object satisfying `AuthSessionStorage`) and pass them straight into the hook/screen under test as props — no mocking framework/library beyond Jest's own `jest.fn()` is needed, and nothing reaches into `src/di/container.ts` for tests (confirmed: no test file imports `container`).
 - **Navigation testing**: screens that call `useNavigation()` are rendered inside a real `NavigationContainer` + `Stack.Navigator` in tests (confirmed in `ProductListScreen.test.tsx`), not a mocked navigation prop — because `useNavigation()` throws without a real navigator ancestor.
 
@@ -901,7 +985,8 @@ Inspecting logs/debugging a running app, device logs, and Flipper/React DevTools
 | Runtime type guards at every network boundary, not just compile-time types | Good existing practice | every `*Dto.ts` file |
 | Consistent `AbortController` + `isActive` cancellation pattern across every data-fetching hook | Good existing practice | `useProducts.ts`, `useProductDetails.ts`, `useProductsByCategory.ts`, `useCategories.ts` |
 | `ProductDetailsParams` factored out once and shared by two stacks, keeping the shared screen's prop type decoupled from either parent stack | Good existing practice | `src/app/navigation/types.ts`, `ProductDetailsScreen.tsx` |
-| `ProductListScreen` and `CategoryProductsScreen` duplicate nearly all of their loading/error/empty/list JSX and `StyleSheet` objects | Improvement opportunity | `ProductListScreen.tsx`, `CategoryProductsScreen.tsx` |
+| `ProductListScreen` and `CategoryProductsScreen` duplicate nearly all of their loading/error/empty/list JSX and `StyleSheet` objects — partially mitigated since both now render the same shared `ProductCardSkeleton` for their first-page loading state instead of each duplicating its own placeholder, but the surrounding error/empty/list JSX and styles are still duplicated | Improvement opportunity | `ProductListScreen.tsx`, `CategoryProductsScreen.tsx` |
+| Pagination's three concurrency/staleness guards (`isLoadingMoreRef`, `categorySlugRef`, `loadMoreControllerRef`) are implemented with plain refs instead of a state-machine library or shared "paginated list" hook abstraction — correctly handles rapid scrolling and category-switch races (confirmed by dedicated tests) without adding a dependency or a premature abstraction for the app's one paginated endpoint | Good existing practice | `useProductsByCategory.ts` |
 | The loading/error/empty three-way `status === '...' &&` rendering block is repeated, nearly verbatim, across five screens rather than factored into one shared component | Improvement opportunity | `ProductListScreen.tsx`, `CategoryProductsScreen.tsx`, `CategoriesScreen.tsx`, `ProductDetailsScreen.tsx` |
 | Colors (`'#111827'`, `'#6b7280'`, `'#f3f4f6'`, etc.) are literal hex strings repeated across many files with no central theme/token file | Improvement opportunity | every screen's `StyleSheet.create` |
 | Each feature's remote data source hardcodes its own base URL constant; no centralized endpoint/environment config | Improvement opportunity | `ProductRemoteDataSource.ts`, `CategoryRemoteDataSource.ts`, `AuthRemoteDataSource.ts` |
