@@ -1,10 +1,10 @@
-# React Native Architecture Guide — PropertyListingApp
+# React Native Architecture Guide — ProductListingApp
 
 A from-the-source walkthrough of this repository, written for an experienced iOS/Swift/UIKit/SwiftUI developer who is new to React Native. Every claim below was verified against the actual files in this repo on 2026-10-28 (updated after the product/category UI redesign, the full product-details rewrite, and the category-product pagination feature landed); where something could not be verified (no such file, or behavior not implemented), that is stated explicitly rather than assumed.
 
 ## Executive Summary
 
-PropertyListingApp is a React Native 0.88 / TypeScript / React Native CLI (not Expo) app. It is called "PropertyListingApp" and its UI is styled as a property-listing app ("Properties", "Property Details"), but **the data it consumes is DummyJSON's generic e-commerce product/category API** — there is no real estate backend. It has a login screen (backed by `https://dummyjson.com/auth`), three bottom tabs (Products, Categories, Account) each with their own native-stack navigator, and a "Liquid Glass" visual treatment that activates only on iOS 26+.
+ProductListingApp is a React Native 0.88 / TypeScript / React Native CLI (not Expo) app. It is called "ProductListingApp" and its UI is a product-listing app ("Products", "Product Details"), backed by **DummyJSON's generic e-commerce product/category API**. It has a login screen (backed by `https://dummyjson.com/auth`), three bottom tabs (Products, Categories, Account) each with their own native-stack navigator, and a "Liquid Glass" visual treatment that activates only on iOS 26+.
 
 Architecturally, each feature (`auth`, `products`, `categories`) is organized into three layers — **domain** (models, repository interfaces, use-case factory functions), **data** (DTOs, runtime type guards, mappers, concrete repositories, a remote data source), and **presentation** (hooks, screens, one shared context). A single composition root, [`src/di/container.ts`](../src/di/container.ts), wires concrete data-layer implementations to the use cases the UI consumes. This is the same shape as iOS Clean Architecture / Repository pattern work you already know — the terminology (`AuthRepository`, `GetProducts` use case, DTO→domain mapper) will be familiar even though the language is TypeScript instead of Swift.
 
@@ -61,7 +61,7 @@ There is **no Redux/MobX/Zustand**, **no AsyncStorage** (sessions go to the Keyc
 
 ## Section 1: Project Overview
 
-**What it does.** A mobile app, branded "PropertyListingApp" / "Properties", that requires login, then lets the user browse a product list, filter/sort it, browse by category, and view product details — all backed by the public [DummyJSON](https://dummyjson.com) API (`/auth/*`, `/products`, `/products/categories`). This is placeholder e-commerce data wearing real-estate copy ("Property Details", "Properties" tab title) — there is no listings/bedrooms/location data anywhere in the models.
+**What it does.** A mobile app, branded "ProductListingApp" / "Products", that requires login, then lets the user browse a product list, filter/sort it, browse by category, and view product details — all backed by the public [DummyJSON](https://dummyjson.com) API (`/auth/*`, `/products`, `/products/categories`).
 
 **Version/tooling** (from [`package.json`](../package.json)):
 - `react-native`: `0.88.0`, `react`: `19.3.0`.
@@ -153,11 +153,11 @@ property-listing-app/
 │       # products/presentation/ includes useProductsByCategory.test.tsx,
 │       # a dedicated hook test for the pagination/race/concurrency behavior
 ├── android/                        # Native Android project (Kotlin, Gradle)
-│   └── app/src/main/java/com/propertylistingapp/
+│   └── app/src/main/java/com/productlistingapp/
 │       ├── MainActivity.kt
 │       └── MainApplication.kt
 ├── ios/                            # Native iOS project (Swift, Xcode/CocoaPods)
-│   └── PropertyListingApp/
+│   └── ProductListingApp/
 │       ├── AppDelegate.swift
 │       └── SceneDelegate.swift
 └── src/
@@ -244,7 +244,7 @@ Each feature is a vertical slice with its own `domain/`, `data/`, and `presentat
 
 ### `android/` and `ios/`
 
-Standard React Native CLI native projects (not auto-generated on each build — they're checked into the repo and hand-edited when needed, e.g. for the app icon changes visible in this session's git status). `android/app/src/main/java/com/propertylistingapp/MainActivity.kt` and `MainApplication.kt`, and `ios/PropertyListingApp/AppDelegate.swift` and `SceneDelegate.swift`, are the files that matter for understanding startup (Section 3) — the rest (Gradle files, `Podfile`, asset catalogs, `Info.plist`) are native build configuration this report does not re-document file by file.
+Standard React Native CLI native projects (not auto-generated on each build — they're checked into the repo and hand-edited when needed, e.g. for the app icon changes visible in this session's git status). `android/app/src/main/java/com/productlistingapp/MainActivity.kt` and `MainApplication.kt`, and `ios/ProductListingApp/AppDelegate.swift` and `SceneDelegate.swift`, are the files that matter for understanding startup (Section 3) — the rest (Gradle files, `Podfile`, asset catalogs, `Info.plist`) are native build configuration this report does not re-document file by file.
 
 ---
 
@@ -252,7 +252,7 @@ Standard React Native CLI native projects (not auto-generated on each build — 
 
 ### The files, in the order they matter
 
-1. **`app.json`** — compile/package-time only. `{ "name": "PropertyListingApp", "displayName": "PropertyListingApp" }`. Read by `index.js` to know what string to register the root component under.
+1. **`app.json`** — compile/package-time only. `{ "name": "ProductListingApp", "displayName": "ProductListingApp" }`. Read by `index.js` to know what string to register the root component under.
 2. **`index.js`** — the actual JS entry point Metro bundles first:
    ```js
    import { AppRegistry } from 'react-native';
@@ -261,20 +261,20 @@ Standard React Native CLI native projects (not auto-generated on each build — 
 
    AppRegistry.registerComponent(appName, () => App);
    ```
-   `AppRegistry.registerComponent` doesn't render anything by itself — it just tells React Native's native bridge "when the native side asks for a component named `PropertyListingApp`, here's the factory function that produces it." Nothing renders until the native side calls in.
-3. **Native iOS entry** — [`ios/PropertyListingApp/AppDelegate.swift`](../ios/PropertyListingApp/AppDelegate.swift) is now nearly empty (`@main`, `application(_:didFinishLaunchingWithOptions:)` just returns `true`); on RN's New-Architecture-era template, the real work moved to **`SceneDelegate.swift`**, which is where React Native actually boots:
+   `AppRegistry.registerComponent` doesn't render anything by itself — it just tells React Native's native bridge "when the native side asks for a component named `ProductListingApp`, here's the factory function that produces it." Nothing renders until the native side calls in.
+3. **Native iOS entry** — [`ios/ProductListingApp/AppDelegate.swift`](../ios/ProductListingApp/AppDelegate.swift) is now nearly empty (`@main`, `application(_:didFinishLaunchingWithOptions:)` just returns `true`); on RN's New-Architecture-era template, the real work moved to **`SceneDelegate.swift`**, which is where React Native actually boots:
    ```swift
    dependencyProvider = RCTAppDependencyProvider()
    reactNativeFactory = RCTReactNativeFactory(delegate: self)
    window = UIWindow(windowScene: windowScene)
    reactNativeFactory?.startReactNative(
-     withModuleName: "PropertyListingApp",
+     withModuleName: "ProductListingApp",
      in: window,
      connectionOptions: connectionOptions
    )
    ```
-   `startReactNative(withModuleName:in:connectionOptions:)` is the call that starts the JS engine (Hermes), loads the bundle from `bundleURL()` (Metro's dev server in `#if DEBUG`, or `main.jsbundle` in a release build), and tells it to render the component registered under `"PropertyListingApp"` — exactly the name `index.js` registered.
-4. **Native Android entry** — [`MainApplication.kt`](../android/app/src/main/java/com/propertylistingapp/MainApplication.kt)'s `reactHost` lazily builds the React Native host (`getDefaultReactHost`) and `onCreate()` calls `loadReactNative(this)`; [`MainActivity.kt`](../android/app/src/main/java/com/propertylistingapp/MainActivity.kt)'s `getMainComponentName()` returns `"PropertyListingApp"` — again, the same name — and its `createReactActivityDelegate()` wires up Fabric (`fabricEnabled`, read from `android/gradle.properties`'s `newArchEnabled=true`).
+   `startReactNative(withModuleName:in:connectionOptions:)` is the call that starts the JS engine (Hermes), loads the bundle from `bundleURL()` (Metro's dev server in `#if DEBUG`, or `main.jsbundle` in a release build), and tells it to render the component registered under `"ProductListingApp"` — exactly the name `index.js` registered.
+4. **Native Android entry** — [`MainApplication.kt`](../android/app/src/main/java/com/productlistingapp/MainApplication.kt)'s `reactHost` lazily builds the React Native host (`getDefaultReactHost`) and `onCreate()` calls `loadReactNative(this)`; [`MainActivity.kt`](../android/app/src/main/java/com/productlistingapp/MainActivity.kt)'s `getMainComponentName()` returns `"ProductListingApp"` — again, the same name — and its `createReactActivityDelegate()` wires up Fabric (`fabricEnabled`, read from `android/gradle.properties`'s `newArchEnabled=true`).
 5. **`App.tsx`** — the first JS-authored component to actually render:
    ```tsx
    function App() {
@@ -315,8 +315,8 @@ sequenceDiagram
     OS->>Native: launch app
     Native->>Bridge: startReactNative(...) / loadReactNative(this)
     Bridge->>Index: load + evaluate JS bundle
-    Index->>Index: AppRegistry.registerComponent("PropertyListingApp", () => App)
-    Native->>Bridge: render root component "PropertyListingApp"
+    Index->>Index: AppRegistry.registerComponent("ProductListingApp", () => App)
+    Native->>Bridge: render root component "ProductListingApp"
     Bridge->>App: mount <App />
     App->>Root: mount <RootNavigator />
     Root->>Auth: mount <AuthProvider> (state = {status:'checking'})
@@ -407,7 +407,7 @@ Each feature folder has three layers. This is consistent across `auth`, `categor
 - **Props**: `{ getProducts: GetProducts; filters: ProductFilters }` — both injected by `ProductsNavigator`, neither created here.
 - **State and effects**: all fetch state lives in `useProducts` (external to this file); this screen only derives `filteredData` via `useMemo(() => applyProductFilters(...), [state, filters])` — a pure, synchronous re-filter, not a new fetch, whenever either the fetched data or the filter selection changes.
 - **Event handlers**: `renderItem`'s `onPress` navigates to `'ProductDetails'` with `{ productId: item.id }`; wrapped in `useCallback` keyed on `[navigation]` so `FlatList` doesn't get a new function identity every render.
-- **Rendering by state**: loading → a column of four `ProductCardSkeleton` placeholders (not a spinner — see below) under an `accessibilityRole="progressbar"` wrapper; error → message + `GlassButton` "Retry" (calls `retry()` from the hook); success with `data.length === 0` → "No properties found right now" (server returned a genuinely empty list); success with data present but `filteredData.length === 0` → a *different* message, "No properties match these filters" (client-side filter is empty, data wasn't) — these are two distinct empty states, correctly distinguished.
+- **Rendering by state**: loading → a column of four `ProductCardSkeleton` placeholders (not a spinner — see below) under an `accessibilityRole="progressbar"` wrapper; error → message + `GlassButton` "Retry" (calls `retry()` from the hook); success with `data.length === 0` → "No products found right now" (server returned a genuinely empty list); success with data present but `filteredData.length === 0` → a *different* message, "No products match these filters" (client-side filter is empty, data wasn't) — these are two distinct empty states, correctly distinguished.
 - **Loading placeholder**: [`ProductCardSkeleton`](../src/features/products/presentation/components/ProductCardSkeleton.tsx) mirrors `ProductCard`'s exact layout (image block, price/favorite row, title, category, description row) as flat gray `View`s, all pulsing together via the shared `usePulseOpacity()` hook — this replaced an earlier plain `ActivityIndicator` + text loading state, so a first-time visitor sees the shape of the content that's about to arrive rather than a generic spinner.
 - **Reusable components**: `ProductCard`, `ProductCardSkeleton`, `GlassButton`.
 - **Navigation**: pushes `'ProductDetails'`.
@@ -784,7 +784,7 @@ Flexbox-based layout (`flex`, `flexDirection`, `justifyContent`, `alignItems`) i
 
 ### Token persistence
 
-`SecureSessionStorage.ts` is the **only** place sessions are written or read — straight to the platform Keychain/Keystore via `react-native-keychain`'s `setGenericPassword`/`getGenericPassword`/`resetGenericPassword`, scoped under `service: 'com.propertylistingapp.session'`, storing the entire `AuthSession` object (`{accessToken, refreshToken, user}`) as a single JSON string. **Confirmed: no AsyncStorage use anywhere for auth data**, and no logging of token values anywhere in the auth data/domain layers.
+`SecureSessionStorage.ts` is the **only** place sessions are written or read — straight to the platform Keychain/Keystore via `react-native-keychain`'s `setGenericPassword`/`getGenericPassword`/`resetGenericPassword`, scoped under `service: 'com.productlistingapp.session'`, storing the entire `AuthSession` object (`{accessToken, refreshToken, user}`) as a single JSON string. **Confirmed: no AsyncStorage use anywhere for auth data**, and no logging of token values anywhere in the auth data/domain layers.
 
 ### How auth state is shared
 
@@ -810,7 +810,7 @@ Flexbox-based layout (`flex`, `flexDirection`, `justifyContent`, `alignItems`) i
 | API failure (network down) | Caught, re-thrown as a generic user-facing `Error('Could not reach the server...')` | every `*RemoteDataSource.ts` |
 | API failure (bad status code) | `!response.ok` checked explicitly; turned into `Error('Request failed with status {n}.')`, except login's 400/401 → a specific invalid-credentials message | every `*RemoteDataSource.ts`; `AuthRemoteDataSource.login` |
 | Malformed/unexpected response body | Runtime type guard rejects it → `Error('The server returned an unexpected response format.')`; for list endpoints, individual malformed *items* are filtered out (`data.products.filter(isProductDto)`) rather than failing the whole request, **unless every item was invalid while the raw array was non-empty**, which does fail loudly | `ProductRemoteDataSource.fetchProductsList`, `CategoryRemoteDataSource.getCategories` |
-| Empty results (genuinely zero items from the server) | Rendered as an explicit "No properties/products/categories found" empty state, distinct from the error state | `ProductListScreen`, `CategoryProductsScreen`, `CategoriesScreen` |
+| Empty results (genuinely zero items from the server) | Rendered as an explicit "No products/categories found" empty state, distinct from the error state | `ProductListScreen`, `CategoryProductsScreen`, `CategoriesScreen` |
 | Loading state | A dedicated `'loading'` union member in every async hook's state, rendered as a centered `ActivityIndicator` | all data hooks + their screens |
 | Invalid credentials | Specific message surfaced from the 400/401 branch, rendered in `LoginScreen` | `AuthRemoteDataSource.login`, `useLogin`, `LoginScreen` |
 | Product detail retry | `useProductDetails` exposes `retry()`; `ProductDetailsScreen` renders a `GlassButton` calling it on error | `useProductDetails.ts`, `ProductDetailsScreen.tsx` |
@@ -845,8 +845,8 @@ sequenceDiagram
     OS->>Native: process launch
     Native->>Native: startReactNative(...) / loadReactNative(this)
     Native->>Index: evaluate JS bundle (Hermes)
-    Index->>Index: AppRegistry.registerComponent("PropertyListingApp", () => App)
-    Native->>App: render "PropertyListingApp" into UIWindow/Activity
+    Index->>Index: AppRegistry.registerComponent("ProductListingApp", () => App)
+    Native->>App: render "ProductListingApp" into UIWindow/Activity
     App->>Root: mount RootNavigator (inside SafeAreaProvider > ToastProvider)
     Root->>Auth: mount AuthProvider, state = {status:'checking'}
     Auth-->>Root: renders ActivityIndicator while restoreSession() runs

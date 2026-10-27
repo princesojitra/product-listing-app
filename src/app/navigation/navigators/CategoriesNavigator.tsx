@@ -38,7 +38,7 @@ export function CategoriesNavigator() {
       <Stack.Screen
         name="ProductDetails"
         options={{
-          title: 'Property Details',
+          title: 'Product Details',
           headerBackButtonDisplayMode: 'minimal',
         }}>
         {props => (

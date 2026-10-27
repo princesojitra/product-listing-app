@@ -3,7 +3,7 @@ import { AuthSession } from '../../domain/models/AuthSession';
 import { AuthSessionStorage } from '../../domain/repositories/AuthSessionStorage';
 
 /** Scopes the Keychain entry to this app/feature, distinct from any other credential it might store. */
-const SERVICE = 'com.propertylistingapp.session';
+const SERVICE = 'com.productlistingapp.session';
 
 function isStoredSession(value: unknown): value is AuthSession {
   if (typeof value !== 'object' || value === null) {

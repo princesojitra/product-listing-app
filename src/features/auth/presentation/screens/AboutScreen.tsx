@@ -13,7 +13,7 @@ export function AboutScreen() {
         <MaterialIcons name="home-work" size={40} color="#ffffff" />
       </View>
       <Text style={styles.name} accessibilityRole="header">
-        Property Listing App
+        Product Listing App
       </Text>
       <Text style={styles.version}>Version {packageInfo.version}</Text>
 

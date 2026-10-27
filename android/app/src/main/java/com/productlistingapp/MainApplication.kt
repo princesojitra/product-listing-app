@@ -1,4 +1,4 @@
-package com.propertylistingapp
+package com.productlistingapp
 
 import android.app.Application
 import com.facebook.react.PackageList

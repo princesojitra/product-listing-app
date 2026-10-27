@@ -43,7 +43,7 @@ export function ProductsNavigator() {
       <Stack.Screen
         name="ProductsList"
         options={({ navigation }) => ({
-          title: 'Properties',
+          title: 'Products',
           headerRight: () => (
             <FilterButton onPress={() => navigation.navigate('ProductFilters')} />
           ),
@@ -75,7 +75,7 @@ export function ProductsNavigator() {
       <Stack.Screen
         name="ProductDetails"
         options={{
-          title: 'Property Details',
+          title: 'Product Details',
           headerBackButtonDisplayMode: 'minimal',
         }}>
         {props => (

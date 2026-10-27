@@ -4,7 +4,7 @@ Status check of this repo as of 2026-10-27:
 
 | | Android | iOS |
 |---|---|---|
-| App ID / Bundle ID | `com.propertylistingapp` | `org.reactjs.native.example.$(PRODUCT_NAME)` — still the RN default placeholder, not a real bundle ID |
+| App ID / Bundle ID | `com.productlistingapp` | `org.reactjs.native.example.$(PRODUCT_NAME)` — still the RN default placeholder, not a real bundle ID |
 | Signing | `release` build type currently points at `signingConfigs.debug` (see `android/app/build.gradle:98`) — fine for sharing an APK for internal testing, **not** fine for Play Store | No certificate/provisioning profile set up — confirmed by you |
 | Version | `versionCode 1`, `versionName "1.0"` | Not checked (set in Xcode target / Info.plist) |
 
@@ -41,7 +41,7 @@ Output: `android/app/build/outputs/apk/release/app-release.apk`
 1. Generate a keystore once:
    ```sh
    keytool -genkeypair -v -storetype PKCS12 -keystore release.keystore \
-     -alias property-listing-app -keyalg RSA -keysize 2048 -validity 10000
+     -alias product-listing-app -keyalg RSA -keysize 2048 -validity 10000
    ```
 2. Store it outside git, reference it via `android/gradle.properties` (`MYAPP_RELEASE_STORE_FILE`, `...STORE_PASSWORD`, `...KEY_ALIAS`, `...KEY_PASSWORD`) or environment variables in CI — never commit the keystore or its passwords.
 3. Point `signingConfigs.release` in `android/app/build.gradle` at those properties instead of `signingConfigs.debug`.
@@ -72,10 +72,10 @@ You said you don't have a valid certificate. That's the actual blocker — Apple
 
 ### Path A — No paid account (free, limited)
 
-1. Open `ios/PropertyListingApp.xcworkspace` in Xcode.
+1. Open `ios/ProductListingApp.xcworkspace` in Xcode.
 2. Sign in with your Apple ID: Xcode → Settings → Accounts.
-3. Select the `PropertyListingApp` target → Signing & Capabilities → check "Automatically manage signing" → pick your personal team.
-4. Also fix `PRODUCT_BUNDLE_IDENTIFIER` — it's currently the RN placeholder (`org.reactjs.native.example...`), which won't work for real signing. Set something like `com.yourname.propertylistingapp`.
+3. Select the `ProductListingApp` target → Signing & Capabilities → check "Automatically manage signing" → pick your personal team.
+4. Also fix `PRODUCT_BUNDLE_IDENTIFIER` — it's currently the RN placeholder (`org.reactjs.native.example...`), which won't work for real signing. Set something like `com.yourname.productlistingapp`.
 5. Connect the tester's iPhone by cable, select it as the run destination, hit Run. The app installs and launches directly.
 6. Build expires after 7 days; repeat to refresh.
 
@@ -95,14 +95,14 @@ This only works for devices physically connected to your Mac at build time — n
 ### Sharing without Xcode GUI (CLI, once signing is set up)
 
 ```sh
-xcodebuild -workspace ios/PropertyListingApp.xcworkspace \
-  -scheme PropertyListingApp \
+xcodebuild -workspace ios/ProductListingApp.xcworkspace \
+  -scheme ProductListingApp \
   -configuration Release \
-  -archivePath build/PropertyListingApp.xcarchive \
+  -archivePath build/ProductListingApp.xcarchive \
   archive
 
 xcodebuild -exportArchive \
-  -archivePath build/PropertyListingApp.xcarchive \
+  -archivePath build/ProductListingApp.xcarchive \
   -exportPath build/export \
   -exportOptionsPlist ExportOptions.plist
 ```

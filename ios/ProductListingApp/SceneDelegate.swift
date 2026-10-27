@@ -30,7 +30,7 @@ class SceneDelegate: RCTDefaultReactNativeFactoryDelegate, UIWindowSceneDelegate
     #endif
     
     reactNativeFactory?.startReactNative(
-      withModuleName: "PropertyListingApp",
+      withModuleName: "ProductListingApp",
       in: window,
       connectionOptions: connectionOptions
     )

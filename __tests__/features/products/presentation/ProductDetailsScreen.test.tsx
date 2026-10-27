@@ -187,7 +187,7 @@ describe('ProductDetailsScreen', () => {
     expect(findAllText(renderer)).toContain('boom');
 
     const retryButton = renderer.root.findByProps({
-      accessibilityLabel: 'Retry loading property details',
+      accessibilityLabel: 'Retry loading product details',
     });
     await act(async () => {
       (retryButton.props as { onPress: () => void }).onPress();

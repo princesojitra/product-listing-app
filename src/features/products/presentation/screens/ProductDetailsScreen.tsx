@@ -234,7 +234,7 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
         <View style={styles.centered}>
           <ActivityIndicator
             size="large"
-            accessibilityLabel="Loading property details"
+            accessibilityLabel="Loading product details"
           />
           <Text style={styles.centeredText}>Loading details…</Text>
         </View>
@@ -246,7 +246,7 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
           <GlassButton
             label="Retry"
             onPress={retry}
-            accessibilityLabel="Retry loading property details"
+            accessibilityLabel="Retry loading product details"
             style={styles.retryButton}
           />
         </View>

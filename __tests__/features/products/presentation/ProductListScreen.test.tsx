@@ -91,7 +91,7 @@ describe('ProductListScreen', () => {
     });
     await act(async () => {});
 
-    expect(findAllText(renderer).join(' ')).toMatch(/no properties found/i);
+    expect(findAllText(renderer).join(' ')).toMatch(/no products found/i);
   });
 
   it('shows an error with a working retry button', async () => {
@@ -108,7 +108,7 @@ describe('ProductListScreen', () => {
     expect(findAllText(renderer)).toContain('boom');
 
     const retryButton = renderer.root.findByProps({
-      accessibilityLabel: 'Retry loading properties',
+      accessibilityLabel: 'Retry loading products',
     });
 
     await act(async () => {

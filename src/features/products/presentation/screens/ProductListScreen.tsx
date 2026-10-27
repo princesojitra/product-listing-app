@@ -56,7 +56,7 @@ export function ProductListScreen({ getProducts, filters }: ProductListScreenPro
         <View
           style={{ paddingTop: topInset + 16 }}
           accessibilityRole="progressbar"
-          accessibilityLabel="Loading properties">
+          accessibilityLabel="Loading products">
           {SKELETON_KEYS.map(key => (
             <ProductCardSkeleton key={key} />
           ))}
@@ -69,7 +69,7 @@ export function ProductListScreen({ getProducts, filters }: ProductListScreenPro
           <GlassButton
             label="Retry"
             onPress={retry}
-            accessibilityLabel="Retry loading properties"
+            accessibilityLabel="Retry loading products"
             style={styles.retryButton}
           />
         </View>
@@ -78,14 +78,14 @@ export function ProductListScreen({ getProducts, filters }: ProductListScreenPro
       {state.status === 'success' && state.data.length === 0 && (
         <View style={[styles.centered, { paddingTop: topInset }]}>
           <Text style={styles.centeredText}>
-            No properties found right now. Check back soon.
+            No products found right now. Check back soon.
           </Text>
         </View>
       )}
 
       {state.status === 'success' && state.data.length > 0 && filteredData.length === 0 && (
         <View style={[styles.centered, { paddingTop: topInset }]}>
-          <Text style={styles.centeredText}>No properties match these filters.</Text>
+          <Text style={styles.centeredText}>No products match these filters.</Text>
         </View>
       )}
 
