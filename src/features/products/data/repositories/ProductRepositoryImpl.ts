@@ -1,5 +1,6 @@
 import { Product } from '../../domain/models/Product';
 import { ProductDetails } from '../../domain/models/ProductDetails';
+import { ProductsPage } from '../../domain/models/ProductsPage';
 import { ProductRepository } from '../../domain/repositories/ProductRepository';
 import { ProductRemoteDataSource } from '../datasources/ProductRemoteDataSource';
 import { mapProductDtoToProduct } from '../mappers/ProductMapper';
@@ -20,9 +21,12 @@ export function createProductRepository(
       return mapProductDetailsDtoToProductDetails(product);
     },
 
-    async getProductsByCategory(categorySlug, signal): Promise<Product[]> {
-      const products = await dataSource.getProductsByCategory(categorySlug, signal);
-      return products.map(mapProductDtoToProduct);
+    async getProductsByCategory(categorySlug, limit, skip, signal): Promise<ProductsPage> {
+      const page = await dataSource.getProductsByCategory(categorySlug, limit, skip, signal);
+      return {
+        products: page.products.map(mapProductDtoToProduct),
+        total: page.total,
+      };
     },
   };
 }

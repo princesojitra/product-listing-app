@@ -21,23 +21,37 @@ function isValidCategorySlug(slug: string): boolean {
   return slug.trim().length > 0;
 }
 
+/** One page of products plus the total number of matches, for pagination. */
+export interface ProductsPageDto {
+  products: ProductDto[];
+  total: number;
+}
+
 /** Talks HTTP and validates the DummyJSON response shape; returns raw DTOs. */
 export interface ProductRemoteDataSource {
   getProducts(signal?: AbortSignal): Promise<ProductDto[]>;
   getProductById(id: string, signal?: AbortSignal): Promise<ProductDetailsDto>;
-  getProductsByCategory(categorySlug: string, signal?: AbortSignal): Promise<ProductDto[]>;
+  getProductsByCategory(
+    categorySlug: string,
+    limit: number,
+    skip: number,
+    signal?: AbortSignal,
+  ): Promise<ProductsPageDto>;
 }
 
 /**
  * Shared by `getProducts` and `getProductsByCategory`: both hit DummyJSON
  * endpoints returning the same `{products, total, skip, limit}` envelope,
- * differing only in the URL.
+ * differing only in the URL. Returns `total` alongside the validated
+ * products so paginated callers (`getProductsByCategory`) know whether more
+ * pages are available; callers that don't paginate (`getProducts`) just
+ * ignore it.
  */
 async function fetchProductsList(
   httpClient: HttpClient,
   url: string,
   signal?: AbortSignal,
-): Promise<ProductDto[]> {
+): Promise<ProductsPageDto> {
   let response: Response;
   try {
     response = await httpClient.fetch(url, { signal });
@@ -74,7 +88,7 @@ async function fetchProductsList(
     throw new Error('The server response did not contain any valid products.');
   }
 
-  return validProducts;
+  return { products: validProducts, total: data.total };
 }
 
 /**
@@ -87,19 +101,19 @@ export function createProductRemoteDataSource(
   httpClient: HttpClient,
 ): ProductRemoteDataSource {
   return {
-    getProducts(signal) {
-      return fetchProductsList(httpClient, LIST_URL, signal);
+    async getProducts(signal) {
+      const { products } = await fetchProductsList(httpClient, LIST_URL, signal);
+      return products;
     },
 
-    getProductsByCategory(categorySlug, signal) {
+    getProductsByCategory(categorySlug, limit, skip, signal) {
       if (!isValidCategorySlug(categorySlug)) {
         return Promise.reject(new Error('Invalid category.'));
       }
-      return fetchProductsList(
-        httpClient,
-        `${PRODUCTS_URL}/category/${encodeURIComponent(categorySlug)}`,
-        signal,
-      );
+      const url = `${PRODUCTS_URL}/category/${encodeURIComponent(
+        categorySlug,
+      )}?limit=${limit}&skip=${skip}`;
+      return fetchProductsList(httpClient, url, signal);
     },
 
     async getProductById(id, signal) {

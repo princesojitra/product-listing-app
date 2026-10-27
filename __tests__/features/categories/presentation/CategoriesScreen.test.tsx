@@ -178,6 +178,6 @@ describe('CategoriesScreen', () => {
       (row.props as { onPress: () => void }).onPress();
     });
 
-    expect(getProductsByCategory).toHaveBeenCalledWith('beauty', expect.anything());
+    expect(getProductsByCategory).toHaveBeenCalledWith('beauty', 10, 0, expect.anything());
   });
 });

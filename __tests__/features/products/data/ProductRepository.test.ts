@@ -111,7 +111,7 @@ describe('ProductRepository.getProducts (data source + mapper)', () => {
     const httpClient = mockHttpClient({
       ok: true,
       status: 200,
-      json: async () => ({ products: [{ foo: 'bar' }, { id: 'not-a-number' }] }),
+      json: async () => ({ products: [{ foo: 'bar' }, { id: 'not-a-number' }], total: 2 }),
     });
 
     await expect(repositoryFor(httpClient).getProducts()).rejects.toThrow(
@@ -284,50 +284,67 @@ describe('ProductRepository.getProductById (data source + mapper)', () => {
 });
 
 describe('ProductRepository.getProductsByCategory (data source + mapper)', () => {
-  it('requests the category endpoint (URL-encoded) and maps the response into Product[]', async () => {
+  it('requests the category endpoint (URL-encoded, with limit/skip) and maps the response into a ProductsPage', async () => {
     const httpClient = mockHttpClient({
       ok: true,
       status: 200,
       json: async () => ({
         products: [sampleProductDto],
-        total: 1,
-        skip: 0,
+        total: 23,
+        skip: 10,
         limit: 10,
       }),
     });
 
-    const products = await repositoryFor(httpClient).getProductsByCategory('home decoration');
+    const page = await repositoryFor(httpClient).getProductsByCategory('home decoration', 10, 10);
 
     expect(httpClient.fetch).toHaveBeenCalledWith(
-      'https://dummyjson.com/products/category/home%20decoration',
+      'https://dummyjson.com/products/category/home%20decoration?limit=10&skip=10',
       expect.objectContaining({ signal: undefined }),
     );
-    expect(products).toEqual([
-      {
-        id: '1',
-        title: 'Essence Mascara Lash Princess',
-        description: sampleProductDto.description,
-        price: 9.99,
-        category: 'beauty',
-        rating: 4.94,
-        imageUrl: sampleProductDto.thumbnail,
-      },
-    ]);
+    expect(page).toEqual({
+      total: 23,
+      products: [
+        {
+          id: '1',
+          title: 'Essence Mascara Lash Princess',
+          description: sampleProductDto.description,
+          price: 9.99,
+          category: 'beauty',
+          rating: 4.94,
+          imageUrl: sampleProductDto.thumbnail,
+        },
+      ],
+    });
   });
 
   it('rejects an empty category slug without making a request', async () => {
-    const httpClient = mockHttpClient({ ok: true, status: 200, json: async () => ({ products: [] }) });
+    const httpClient = mockHttpClient({ ok: true, status: 200, json: async () => ({ products: [], total: 0 }) });
 
-    await expect(repositoryFor(httpClient).getProductsByCategory('')).rejects.toThrow(
+    await expect(repositoryFor(httpClient).getProductsByCategory('', 10, 0)).rejects.toThrow(
       /invalid category/i,
     );
     expect(httpClient.fetch).not.toHaveBeenCalled();
   });
 
   it('throws when the HTTP response is not ok', async () => {
-    const httpClient = mockHttpClient({ ok: false, status: 404, json: async () => ({ products: [] }) });
+    const httpClient = mockHttpClient({ ok: false, status: 404, json: async () => ({ products: [], total: 0 }) });
 
-    await expect(repositoryFor(httpClient).getProductsByCategory('beauty')).rejects.toThrow(/404/);
+    await expect(repositoryFor(httpClient).getProductsByCategory('beauty', 10, 0)).rejects.toThrow(
+      /404/,
+    );
+  });
+
+  it('throws when the response envelope is missing a numeric total', async () => {
+    const httpClient = mockHttpClient({
+      ok: true,
+      status: 200,
+      json: async () => ({ products: [sampleProductDto] }),
+    });
+
+    await expect(repositoryFor(httpClient).getProductsByCategory('beauty', 10, 0)).rejects.toThrow(
+      /unexpected response format/i,
+    );
   });
 
   it('wraps a network failure in a user-facing error', async () => {
@@ -335,7 +352,7 @@ describe('ProductRepository.getProductsByCategory (data source + mapper)', () =>
       fetch: jest.fn().mockRejectedValue(new TypeError('Failed to fetch')),
     };
 
-    await expect(repositoryFor(httpClient).getProductsByCategory('beauty')).rejects.toThrow(
+    await expect(repositoryFor(httpClient).getProductsByCategory('beauty', 10, 0)).rejects.toThrow(
       /could not reach the server/i,
     );
   });
@@ -347,7 +364,7 @@ describe('ProductRepository.getProductsByCategory (data source + mapper)', () =>
       fetch: jest.fn().mockRejectedValue(abortError),
     };
 
-    await expect(repositoryFor(httpClient).getProductsByCategory('beauty')).rejects.toBe(
+    await expect(repositoryFor(httpClient).getProductsByCategory('beauty', 10, 0)).rejects.toBe(
       abortError,
     );
   });

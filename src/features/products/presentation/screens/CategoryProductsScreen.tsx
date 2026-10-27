@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CategoriesStackParamList } from '../../../../app/navigation/types';
@@ -23,9 +23,35 @@ const SKELETON_KEYS = ['skeleton-1', 'skeleton-2', 'skeleton-3', 'skeleton-4'];
 
 export function CategoryProductsScreen({ route, navigation, getProductsByCategory }: Props) {
   const { categorySlug } = route.params;
-  const { state, retry } = useProductsByCategory(categorySlug, getProductsByCategory);
+  const { state, retry, loadMore, isLoadingMore, loadMoreError } = useProductsByCategory(
+    categorySlug,
+    getProductsByCategory,
+  );
   const { topInset, scrollInsetProps } = useGlassScrollInsets();
   const insets = useSafeAreaInsets();
+
+  const renderFooter = useCallback(() => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footer}>
+          <ActivityIndicator accessibilityLabel="Loading more products" />
+        </View>
+      );
+    }
+    if (loadMoreError) {
+      return (
+        <View style={styles.footer}>
+          <Text style={styles.footerErrorText}>{loadMoreError}</Text>
+          <GlassButton
+            label="Retry"
+            onPress={loadMore}
+            accessibilityLabel="Retry loading more products"
+          />
+        </View>
+      );
+    }
+    return null;
+  }, [isLoadingMore, loadMoreError, loadMore]);
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => (
@@ -75,6 +101,9 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
           data={state.data}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
           contentContainerStyle={[styles.listContent, { paddingBottom: tabBarBottomPadding(insets.bottom) }]}
           {...scrollInsetProps}
         />
@@ -105,5 +134,16 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 16,
+  },
+  footer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  footerErrorText: {
+    fontSize: 14,
+    color: '#374151',
+    textAlign: 'center',
   },
 });

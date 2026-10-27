@@ -323,17 +323,26 @@ export function ProductDetailsScreen({ route, navigation, getProductDetails }: P
                   {state.data.availabilityStatus}
                 </Text>
               </View>
-              {state.data.tags
-                // Tags that just repeat the category badge above (e.g. a
-                // "beauty" product tagged "beauty") would show the same word
-                // twice — drop those rather than list a tag redundantly.
-                .filter(tag => tag.toLowerCase() !== state.data.category.toLowerCase())
-                .map(tag => (
-                  <View key={tag} style={styles.tagChip}>
-                    <Text style={styles.tagChipText}>{tag}</Text>
-                  </View>
-                ))}
             </View>
+
+            {(() => {
+              // Tags that just repeat the category badge above (e.g. a
+              // "beauty" product tagged "beauty") would show the same word
+              // twice — drop those rather than list a tag redundantly.
+              const otherTags = state.data.tags.filter(
+                tag => tag.toLowerCase() !== state.data.category.toLowerCase(),
+              );
+              return (
+                otherTags.length > 0 && (
+                  <View style={styles.tagsRow}>
+                    <MaterialIcons name="local-offer" size={14} color="#9ca3af" />
+                    <Text style={styles.tagsRowText} numberOfLines={1}>
+                      {otherTags.join('  ·  ')}
+                    </Text>
+                  </View>
+                )
+              );
+            })()}
 
             <Text style={styles.description}>{state.data.description}</Text>
 
@@ -583,16 +592,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#374151',
   },
-  tagChip: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
   },
-  tagChipText: {
+  tagsRowText: {
+    flex: 1,
     fontSize: 13,
-    fontWeight: '500',
-    color: '#4b5563',
+    color: '#9ca3af',
     textTransform: 'capitalize',
   },
   description: {

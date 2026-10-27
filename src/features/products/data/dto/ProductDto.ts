@@ -40,13 +40,17 @@ export function isProductDto(value: unknown): value is ProductDto {
   );
 }
 
-/** Runtime guard for the top-level `/products` response envelope. */
+/**
+ * Runtime guard for the top-level `/products` response envelope. `total` is
+ * validated (not just `products`) because paginated callers rely on it to
+ * know whether more pages are available.
+ */
 export function isProductsResponseDto(
   value: unknown,
-): value is { products: unknown[] } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    Array.isArray((value as Record<string, unknown>).products)
-  );
+): value is { products: unknown[]; total: number } {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.products) && typeof candidate.total === 'number';
 }

@@ -5,6 +5,7 @@ export { CategoryProductsScreen } from './presentation/screens/CategoryProductsS
 export type { ProductRepository } from './domain/repositories/ProductRepository';
 export type { Product } from './domain/models/Product';
 export type { ProductDetails } from './domain/models/ProductDetails';
+export type { ProductsPage } from './domain/models/ProductsPage';
 export type { ProductFilters, ProductSortOption } from './domain/models/ProductFilters';
 export { DEFAULT_PRODUCT_FILTERS } from './domain/models/ProductFilters';
 export { applyProductFilters } from './domain/applyProductFilters';
