@@ -32,6 +32,12 @@ export type CategoriesStackParamList = {
   ProductDetails: ProductDetailsParams;
 };
 
+/** Centralized route parameter list for the Account tab's nested stack. */
+export type AccountStackParamList = {
+  AccountHome: undefined;
+  About: undefined;
+};
+
 /** Top-level bottom-tab route list. Each tab owns its own nested navigator/screen. */
 export type RootTabParamList = {
   Products: undefined;

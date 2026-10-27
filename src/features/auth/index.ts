@@ -1,5 +1,6 @@
 export { LoginScreen } from './presentation/screens/LoginScreen';
 export { AccountScreen } from './presentation/screens/AccountScreen';
+export { AboutScreen } from './presentation/screens/AboutScreen';
 export { AuthProvider, useAuth } from './presentation/context/AuthContext';
 export type { AuthState } from './presentation/context/AuthContext';
 export type { AuthRepository } from './domain/repositories/AuthRepository';

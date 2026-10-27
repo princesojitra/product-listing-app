@@ -1,11 +1,17 @@
 import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import { Alert, Text } from 'react-native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from '../../../../src/features/auth/presentation/context/AuthContext';
 import { AccountScreen } from '../../../../src/features/auth/presentation/screens/AccountScreen';
 import { AuthSessionStorage } from '../../../../src/features/auth/domain/repositories/AuthSessionStorage';
 import { AuthSession } from '../../../../src/features/auth/domain/models/AuthSession';
+import { AccountStackParamList } from '../../../../src/app/navigation/types';
 import { ToastProvider } from '../../../../src/core/ui/Toast';
+import { InAppBrowser } from 'react-native-inappbrowser-reborn';
+
+const Stack = createNativeStackNavigator<AccountStackParamList>();
 
 const sampleSession: AuthSession = {
   accessToken: 'access-token',
@@ -32,7 +38,10 @@ function findAllText(renderer: ReactTestRenderer.ReactTestRenderer): string[] {
     .filter((value): value is string => typeof value === 'string');
 }
 
-async function renderAccountScreen(logout: jest.Mock) {
+async function renderAccountScreen(
+  logout: jest.Mock,
+  navigationRef?: React.RefObject<NavigationContainerRef<AccountStackParamList> | null>,
+) {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => {
     renderer = ReactTestRenderer.create(
@@ -42,7 +51,12 @@ async function renderAccountScreen(logout: jest.Mock) {
           logout={logout}
           restoreSession={jest.fn().mockResolvedValue(sampleSession)}
           sessionStorage={fakeSessionStorage()}>
-          <AccountScreen />
+          <NavigationContainer ref={navigationRef}>
+            <Stack.Navigator>
+              <Stack.Screen name="AccountHome" component={AccountScreen} />
+              <Stack.Screen name="About">{() => null}</Stack.Screen>
+            </Stack.Navigator>
+          </NavigationContainer>
         </AuthProvider>
       </ToastProvider>,
     );
@@ -102,5 +116,31 @@ describe('AccountScreen', () => {
     expect(logout).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
+  });
+
+  it('navigates to About', async () => {
+    const navigationRef = React.createRef<NavigationContainerRef<AccountStackParamList>>();
+    const renderer = await renderAccountScreen(jest.fn(), navigationRef);
+
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: 'About' }).props.onPress();
+    });
+
+    expect(navigationRef.current?.getCurrentRoute()?.name).toBe('About');
+  });
+
+  it('opens the help link in the system in-app browser, not a pushed screen', async () => {
+    const navigationRef = React.createRef<NavigationContainerRef<AccountStackParamList>>();
+    const renderer = await renderAccountScreen(jest.fn(), navigationRef);
+    const routeBefore = navigationRef.current?.getCurrentRoute()?.name;
+
+    await act(async () => {
+      renderer.root.findByProps({ accessibilityLabel: 'Need help?' }).props.onPress();
+    });
+
+    expect(InAppBrowser.open).toHaveBeenCalledWith(
+      'https://github.com/princesojitra/property-listing-app/issues',
+    );
+    expect(navigationRef.current?.getCurrentRoute()?.name).toBe(routeBefore);
   });
 });
