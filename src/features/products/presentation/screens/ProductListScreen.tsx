@@ -1,10 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../app/navigation/types';
 import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
 import { Product } from '../../domain/models/Product';
+import { ProductFilters } from '../../domain/models/ProductFilters';
+import { applyProductFilters } from '../../domain/applyProductFilters';
 import { GetProducts } from '../../domain/usecases/GetProducts';
 import { useProducts } from '../hooks/useProducts';
 import { ProductCard } from '../components/ProductCard';
@@ -21,12 +23,17 @@ type ProductsNavigationProp = NativeStackNavigationProp<
 
 interface ProductListScreenProps {
   getProducts: GetProducts;
+  filters: ProductFilters;
 }
 
-export function ProductListScreen({ getProducts }: ProductListScreenProps) {
+export function ProductListScreen({ getProducts, filters }: ProductListScreenProps) {
   const { state, retry } = useProducts(getProducts);
   const navigation = useNavigation<ProductsNavigationProp>();
   const { topInset, scrollInsetProps } = useGlassScrollInsets();
+  const filteredData = useMemo(
+    () => (state.status === 'success' ? applyProductFilters(state.data, filters) : []),
+    [state, filters],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => (
@@ -70,9 +77,15 @@ export function ProductListScreen({ getProducts }: ProductListScreenProps) {
         </View>
       )}
 
-      {state.status === 'success' && state.data.length > 0 && (
+      {state.status === 'success' && state.data.length > 0 && filteredData.length === 0 && (
+        <View style={[styles.centered, { paddingTop: topInset }]}>
+          <Text style={styles.centeredText}>No properties match these filters.</Text>
+        </View>
+      )}
+
+      {state.status === 'success' && filteredData.length > 0 && (
         <FlatList
-          data={state.data}
+          data={filteredData}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}

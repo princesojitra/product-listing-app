@@ -7,6 +7,7 @@ import { ProductListScreen } from '../../../../src/features/products/presentatio
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
 import { RootStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
+import { DEFAULT_PRODUCT_FILTERS } from '../../../../src/features/products/domain/models/ProductFilters';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -32,7 +33,7 @@ function renderNavigator(getProducts: jest.Mock, getProductDetails: jest.Mock = 
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="ProductsList">
-          {() => <ProductListScreen getProducts={getProducts} />}
+          {() => <ProductListScreen getProducts={getProducts} filters={DEFAULT_PRODUCT_FILTERS} />}
         </Stack.Screen>
         <Stack.Screen name="ProductDetails">
           {props => <ProductDetailsScreen {...props} getProductDetails={getProductDetails} />}

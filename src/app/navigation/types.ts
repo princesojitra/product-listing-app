@@ -15,6 +15,7 @@ export type ProductDetailsParams = { productId: string };
  */
 export type RootStackParamList = {
   ProductsList: undefined;
+  ProductFilters: undefined;
   ProductDetails: ProductDetailsParams;
 };
 

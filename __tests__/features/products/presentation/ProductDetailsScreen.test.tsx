@@ -11,6 +11,7 @@ import { ProductDetailsScreen } from '../../../../src/features/products/presenta
 import { RootStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 import { ProductDetails } from '../../../../src/features/products/domain/models/ProductDetails';
+import { DEFAULT_PRODUCT_FILTERS } from '../../../../src/features/products/domain/models/ProductFilters';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -69,7 +70,7 @@ async function navigateToDetails(
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator>
           <Stack.Screen name="ProductsList">
-            {() => <ProductListScreen getProducts={getProducts} />}
+            {() => <ProductListScreen getProducts={getProducts} filters={DEFAULT_PRODUCT_FILTERS} />}
           </Stack.Screen>
           <Stack.Screen name="ProductDetails">
             {props => (

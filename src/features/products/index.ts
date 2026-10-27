@@ -1,9 +1,13 @@
 export { ProductListScreen } from './presentation/screens/ProductListScreen';
 export { ProductDetailsScreen } from './presentation/screens/ProductDetailsScreen';
+export { ProductFiltersScreen } from './presentation/screens/ProductFiltersScreen';
 export { CategoryProductsScreen } from './presentation/screens/CategoryProductsScreen';
 export type { ProductRepository } from './domain/repositories/ProductRepository';
 export type { Product } from './domain/models/Product';
 export type { ProductDetails } from './domain/models/ProductDetails';
+export type { ProductFilters, ProductSortOption } from './domain/models/ProductFilters';
+export { DEFAULT_PRODUCT_FILTERS } from './domain/models/ProductFilters';
+export { applyProductFilters } from './domain/applyProductFilters';
 export { createProductRemoteDataSource } from './data/datasources/ProductRemoteDataSource';
 export { createProductRepository } from './data/repositories/ProductRepositoryImpl';
 export { createGetProducts } from './domain/usecases/GetProducts';
