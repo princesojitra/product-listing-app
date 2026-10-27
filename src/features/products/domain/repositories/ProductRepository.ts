@@ -12,4 +12,5 @@ import { ProductDetails } from '../models/ProductDetails';
 export interface ProductRepository {
   getProducts(signal?: AbortSignal): Promise<Product[]>;
   getProductById(id: string, signal?: AbortSignal): Promise<ProductDetails>;
+  getProductsByCategory(categorySlug: string, signal?: AbortSignal): Promise<Product[]>;
 }

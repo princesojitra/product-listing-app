@@ -9,11 +9,19 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../../app/navigation/navigationTypes';
+import { ProductDetailsParams } from '../../../../app/navigation/navigationTypes';
 import { GetProductDetails } from '../../domain/usecases/GetProductDetails';
 import { useProductDetails } from '../hooks/useProductDetails';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetails'> & {
+/**
+ * Typed only against its own route's params, not a specific parent stack's
+ * full param list — this screen is reused from both the Products tab's
+ * stack and the Categories tab's stack (list -> category products ->
+ * shared details), and each passes its own (wider) navigation prop, which
+ * is structurally compatible with this narrower requirement.
+ */
+type ProductDetailsOnlyParamList = { ProductDetails: ProductDetailsParams };
+type Props = NativeStackScreenProps<ProductDetailsOnlyParamList, 'ProductDetails'> & {
   getProductDetails: GetProductDetails;
 };
 

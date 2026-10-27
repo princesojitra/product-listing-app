@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,6 +8,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CategoriesStackParamList } from '../../../../app/navigation/navigationTypes';
 import { Category } from '../../domain/models/Category';
 import { GetCategories } from '../../domain/usecases/GetCategories';
 import { useCategories } from '../hooks/useCategories';
@@ -16,13 +19,10 @@ function keyExtractor(item: Category): string {
   return item.slug;
 }
 
-function renderItem({ item }: { item: Category }) {
-  return (
-    <View style={styles.row} accessibilityLabel={item.name}>
-      <Text style={styles.rowText}>{item.name}</Text>
-    </View>
-  );
-}
+type CategoriesNavigationProp = NativeStackNavigationProp<
+  CategoriesStackParamList,
+  'CategoriesList'
+>;
 
 interface CategoriesScreenProps {
   getCategories: GetCategories;
@@ -30,6 +30,25 @@ interface CategoriesScreenProps {
 
 export function CategoriesScreen({ getCategories }: CategoriesScreenProps) {
   const { state, retry } = useCategories(getCategories);
+  const navigation = useNavigation<CategoriesNavigationProp>();
+
+  const renderItem = useCallback(
+    ({ item }: { item: Category }) => (
+      <Pressable
+        style={styles.row}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+        onPress={() =>
+          navigation.navigate('CategoryProducts', {
+            categorySlug: item.slug,
+            categoryName: item.name,
+          })
+        }>
+        <Text style={styles.rowText}>{item.name}</Text>
+      </Pressable>
+    ),
+    [navigation],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

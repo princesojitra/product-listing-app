@@ -4,6 +4,7 @@ import {
   createProductRepository,
   createGetProducts,
   createGetProductDetails,
+  createGetProductsByCategory,
 } from '../features/products';
 import {
   createCategoryRemoteDataSource,
@@ -30,5 +31,6 @@ const categoryRepository = createCategoryRepository(categoryRemoteDataSource);
 export const container = {
   getProducts: createGetProducts(productRepository),
   getProductDetails: createGetProductDetails(productRepository),
+  getProductsByCategory: createGetProductsByCategory(productRepository),
   getCategories: createGetCategories(categoryRepository),
 };

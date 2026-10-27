@@ -1,13 +1,49 @@
 import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import { ActivityIndicator, Text } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoriesScreen } from '../../../../src/features/categories/presentation/screens/CategoriesScreen';
+import { CategoryProductsScreen } from '../../../../src/features/products/presentation/screens/CategoryProductsScreen';
+import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
+import { CategoriesStackParamList } from '../../../../src/app/navigation/navigationTypes';
 import { Category } from '../../../../src/features/categories/domain/models/Category';
+
+const Stack = createNativeStackNavigator<CategoriesStackParamList>();
 
 const sampleCategories: Category[] = [
   { slug: 'beauty', name: 'Beauty' },
   { slug: 'fragrances', name: 'Fragrances' },
 ];
+
+/**
+ * `useNavigation()` needs a real Navigator ancestor (a bare
+ * `NavigationContainer` isn't enough), so tests render the list screen
+ * through an actual stack rather than in isolation.
+ */
+function renderNavigator(
+  getCategories: jest.Mock,
+  getProductsByCategory: jest.Mock = jest.fn(),
+  getProductDetails: jest.Mock = jest.fn(),
+) {
+  return ReactTestRenderer.create(
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="CategoriesList">
+          {() => <CategoriesScreen getCategories={getCategories} />}
+        </Stack.Screen>
+        <Stack.Screen name="CategoryProducts">
+          {props => (
+            <CategoryProductsScreen {...props} getProductsByCategory={getProductsByCategory} />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="ProductDetails">
+          {props => <ProductDetailsScreen {...props} getProductDetails={getProductDetails} />}
+        </Stack.Screen>
+      </Stack.Navigator>
+    </NavigationContainer>,
+  );
+}
 
 function findAllText(renderer: ReactTestRenderer.ReactTestRenderer): string[] {
   return renderer.root
@@ -29,9 +65,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
 
     expect(renderer.root.findAllByType(ActivityIndicator)).toHaveLength(1);
@@ -43,9 +77,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
     await act(async () => {});
 
@@ -59,9 +91,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
     await act(async () => {});
 
@@ -75,9 +105,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
     await act(async () => {});
 
@@ -103,9 +131,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
     await act(async () => {});
 
@@ -123,9 +149,7 @@ describe('CategoriesScreen', () => {
 
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = ReactTestRenderer.create(
-        <CategoriesScreen getCategories={getCategories} />,
-      );
+      renderer = renderNavigator(getCategories);
     });
 
     act(() => {
@@ -137,5 +161,23 @@ describe('CategoriesScreen', () => {
     });
     // No assertion beyond "this doesn't throw / warn" — React would log an
     // act()/state-update warning if the hook updated state after unmount.
+  });
+
+  it('navigates to CategoryProducts with the selected category slug and name when tapped', async () => {
+    getCategories.mockResolvedValue(sampleCategories);
+    const getProductsByCategory = jest.fn().mockReturnValue(new Promise(() => {}));
+
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = renderNavigator(getCategories, getProductsByCategory);
+    });
+    await act(async () => {});
+
+    const row = renderer.root.findByProps({ accessibilityLabel: 'Beauty' });
+    await act(async () => {
+      (row.props as { onPress: () => void }).onPress();
+    });
+
+    expect(getProductsByCategory).toHaveBeenCalledWith('beauty', expect.anything());
   });
 });

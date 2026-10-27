@@ -19,5 +19,10 @@ export function createProductRepository(
       const product = await dataSource.getProductById(id, signal);
       return mapProductDetailsDtoToProductDetails(product);
     },
+
+    async getProductsByCategory(categorySlug, signal): Promise<Product[]> {
+      const products = await dataSource.getProductsByCategory(categorySlug, signal);
+      return products.map(mapProductDtoToProduct);
+    },
   };
 }

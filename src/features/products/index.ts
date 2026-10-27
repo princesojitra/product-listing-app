@@ -1,5 +1,6 @@
 export { ProductListScreen } from './presentation/screens/ProductListScreen';
 export { ProductDetailsScreen } from './presentation/screens/ProductDetailsScreen';
+export { CategoryProductsScreen } from './presentation/screens/CategoryProductsScreen';
 export type { ProductRepository } from './domain/repositories/ProductRepository';
 export type { Product } from './domain/models/Product';
 export type { ProductDetails } from './domain/models/ProductDetails';
@@ -7,3 +8,4 @@ export { createProductRemoteDataSource } from './data/datasources/ProductRemoteD
 export { createProductRepository } from './data/repositories/ProductRepositoryImpl';
 export { createGetProducts } from './domain/usecases/GetProducts';
 export { createGetProductDetails } from './domain/usecases/GetProductDetails';
+export { createGetProductsByCategory } from './domain/usecases/GetProductsByCategory';
