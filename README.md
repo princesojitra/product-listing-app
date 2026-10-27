@@ -2,9 +2,10 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 ## Demo
 
-![Demo](docs/media/products-demo.gif)
-
-[Watch the full demo video](docs/media/products-demo.mp4)
+| iOS | Android |
+|---|---|
+| ![iOS Demo](docs/media/ios-demo.gif) | ![Android Demo](docs/media/android-demo.gif) |
+| [Watch the full iOS video](docs/media/ios-demo.mp4) | [Watch the full Android video](docs/media/android-demo.mp4) |
 
 # Getting Started
 
