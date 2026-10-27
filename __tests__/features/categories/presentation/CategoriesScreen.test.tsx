@@ -1,9 +1,10 @@
 import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
-import { ActivityIndicator, Text } from 'react-native';
+import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoriesScreen } from '../../../../src/features/categories/presentation/screens/CategoriesScreen';
+import { CategoryTileSkeleton } from '../../../../src/features/categories/presentation/components/CategoryTileSkeleton';
 import { CategoryProductsScreen } from '../../../../src/features/products/presentation/screens/CategoryProductsScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
 import { CategoriesStackParamList } from '../../../../src/app/navigation/types';
@@ -68,8 +69,7 @@ describe('CategoriesScreen', () => {
       renderer = renderNavigator(getCategories);
     });
 
-    expect(renderer.root.findAllByType(ActivityIndicator)).toHaveLength(1);
-    expect(findAllText(renderer)).toContain('Loading categories…');
+    expect(renderer.root.findAllByType(CategoryTileSkeleton)).toHaveLength(6);
   });
 
   it('renders categories after a successful fetch', async () => {
@@ -135,7 +135,7 @@ describe('CategoriesScreen', () => {
     });
     await act(async () => {});
 
-    expect(findAllText(renderer)).toContain('Loading categories…');
+    expect(renderer.root.findAllByType(CategoryTileSkeleton)).toHaveLength(6);
     expect(renderer.root.findAllByProps({ children: 'Aborted' })).toHaveLength(0);
   });
 

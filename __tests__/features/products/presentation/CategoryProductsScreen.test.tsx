@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
-import { ActivityIndicator, Text } from 'react-native';
+import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoryProductsScreen } from '../../../../src/features/products/presentation/screens/CategoryProductsScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
+import { ProductCardSkeleton } from '../../../../src/features/products/presentation/components/ProductCardSkeleton';
 import { CategoriesStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 
@@ -65,8 +66,7 @@ describe('CategoryProductsScreen', () => {
     });
 
     expect(getProductsByCategory).toHaveBeenCalledWith('smartphones', expect.anything());
-    expect(renderer.root.findAllByType(ActivityIndicator)).toHaveLength(1);
-    expect(findAllText(renderer)).toContain('Loading products…');
+    expect(renderer.root.findAllByType(ProductCardSkeleton)).toHaveLength(4);
   });
 
   it('renders products after a successful fetch', async () => {

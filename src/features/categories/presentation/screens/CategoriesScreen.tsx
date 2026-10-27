@@ -1,17 +1,26 @@
 import React, { useCallback } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import { CategoriesStackParamList } from '../../../../app/navigation/types';
 import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
 import { Category } from '../../domain/models/Category';
 import { GetCategories } from '../../domain/usecases/GetCategories';
 import { useCategories } from '../hooks/useCategories';
 import { GlassButton } from '../../../../core/ui/GlassButton';
+import { CategoryTileSkeleton } from '../components/CategoryTileSkeleton';
 
 function keyExtractor(item: Category): string {
   return item.slug;
 }
+
+const SKELETON_ROWS = [
+  ['skeleton-1', 'skeleton-2'],
+  ['skeleton-3', 'skeleton-4'],
+  ['skeleton-5', 'skeleton-6'],
+];
 
 /** Pastel accent palette, picked deterministically per category so each one keeps its own color. */
 const ACCENTS = [
@@ -23,12 +32,46 @@ const ACCENTS = [
   { bg: '#fefce8', fg: '#a16207' },
 ];
 
-function accentFor(slug: string): { bg: string; fg: string } {
-  let hash = 0;
-  for (let i = 0; i < slug.length; i += 1) {
-    hash = (hash * 31 + slug.charCodeAt(i)) % ACCENTS.length;
-  }
-  return ACCENTS[hash];
+/** Cycles through the palette by position so no two tiles next to each other share a color. */
+function accentFor(index: number): { bg: string; fg: string } {
+  return ACCENTS[index % ACCENTS.length];
+}
+
+type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
+
+/** DummyJSON's known category slugs mapped to a representative MaterialIcons glyph. */
+const CATEGORY_ICONS: Record<string, MaterialIconName> = {
+  beauty: 'face',
+  fragrances: 'local-florist',
+  furniture: 'weekend',
+  groceries: 'local-grocery-store',
+  'home-decoration': 'wallpaper',
+  'kitchen-accessories': 'kitchen',
+  laptops: 'laptop',
+  'mens-shirts': 'checkroom',
+  'mens-shoes': 'directions-walk',
+  'mens-watches': 'watch',
+  'mobile-accessories': 'headset',
+  motorcycle: 'two-wheeler',
+  'skin-care': 'spa',
+  smartphones: 'smartphone',
+  'sports-accessories': 'sports-soccer',
+  sunglasses: 'wb-sunny',
+  tablets: 'tablet-mac',
+  tops: 'checkroom',
+  vehicle: 'directions-car',
+  'womens-bags': 'shopping-bag',
+  'womens-dresses': 'checkroom',
+  'womens-jewellery': 'diamond',
+  'womens-shoes': 'directions-walk',
+  'womens-watches': 'watch',
+};
+
+/** A generic placeholder for any category DummyJSON adds that isn't in the map above. */
+const DEFAULT_CATEGORY_ICON: MaterialIconName = 'category';
+
+function iconFor(slug: string): MaterialIconName {
+  return CATEGORY_ICONS[slug] ?? DEFAULT_CATEGORY_ICON;
 }
 
 type CategoriesNavigationProp = NativeStackNavigationProp<
@@ -44,13 +87,14 @@ export function CategoriesScreen({ getCategories }: CategoriesScreenProps) {
   const { state, retry } = useCategories(getCategories);
   const navigation = useNavigation<CategoriesNavigationProp>();
   const { topInset, scrollInsetProps } = useGlassScrollInsets();
+  const insets = useSafeAreaInsets();
 
   const renderItem = useCallback(
-    ({ item }: { item: Category }) => {
-      const accent = accentFor(item.slug);
+    ({ item, index }: { item: Category; index: number }) => {
+      const accent = accentFor(index);
       return (
         <Pressable
-          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          style={({ pressed }) => [styles.tile, { backgroundColor: accent.bg }, pressed && styles.tilePressed]}
           accessibilityRole="button"
           accessibilityLabel={item.name}
           onPress={() =>
@@ -59,13 +103,10 @@ export function CategoriesScreen({ getCategories }: CategoriesScreenProps) {
               categoryName: item.name,
             })
           }>
-          <View style={[styles.icon, { backgroundColor: accent.bg }]}>
-            <Text style={[styles.iconText, { color: accent.fg }]}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <Text style={styles.rowText}>{item.name}</Text>
-          <Text style={styles.chevron}>›</Text>
+          <MaterialIcons name={iconFor(item.slug)} size={36} color={accent.fg} style={styles.tileIcon} />
+          <Text style={styles.tileText} numberOfLines={2}>
+            {item.name}
+          </Text>
         </Pressable>
       );
     },
@@ -75,12 +116,17 @@ export function CategoriesScreen({ getCategories }: CategoriesScreenProps) {
   return (
     <View style={styles.container}>
       {state.status === 'loading' && (
-        <View style={[styles.centered, { paddingTop: topInset }]}>
-          <ActivityIndicator
-            size="large"
-            accessibilityLabel="Loading categories"
-          />
-          <Text style={styles.centeredText}>Loading categories…</Text>
+        <View
+          style={[styles.listContent, { paddingTop: topInset + 16, paddingBottom: insets.bottom + 72 }]}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading categories">
+          {SKELETON_ROWS.map(row => (
+            <View key={row[0]} style={styles.column}>
+              {row.map(key => (
+                <CategoryTileSkeleton key={key} />
+              ))}
+            </View>
+          ))}
         </View>
       )}
 
@@ -109,7 +155,9 @@ export function CategoriesScreen({ getCategories }: CategoriesScreenProps) {
           data={state.data}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          numColumns={2}
+          columnWrapperStyle={styles.column}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 72 }]}
           {...scrollInsetProps}
         />
       )}
@@ -123,7 +171,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   listContent: {
-    paddingBottom: 24,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    gap: 12,
+  },
+  column: {
+    flexDirection: 'row',
+    gap: 12,
   },
   centered: {
     flex: 1,
@@ -140,47 +194,29 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 16,
   },
-  row: {
-    flexDirection: 'row',
+  tile: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 20,
     alignItems: 'center',
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginVertical: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  rowPressed: {
+  tilePressed: {
     opacity: 0.7,
   },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
+  tileIcon: {
+    marginBottom: 8,
   },
-  iconText: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  rowText: {
-    flex: 1,
-    fontSize: 16,
+  tileText: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#111827',
-  },
-  chevron: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#d1d5db',
-    marginLeft: 8,
+    textAlign: 'center',
   },
 });

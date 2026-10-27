@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CategoriesStackParamList } from '../../../../app/navigation/types';
 import { useGlassScrollInsets } from '../../../../app/navigation/shared/layoutInsets';
@@ -7,6 +8,7 @@ import { Product } from '../../domain/models/Product';
 import { GetProductsByCategory } from '../../domain/usecases/GetProductsByCategory';
 import { useProductsByCategory } from '../hooks/useProductsByCategory';
 import { ProductCard } from '../components/ProductCard';
+import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
 import { GlassButton } from '../../../../core/ui/GlassButton';
 
 type Props = NativeStackScreenProps<CategoriesStackParamList, 'CategoryProducts'> & {
@@ -17,10 +19,13 @@ function keyExtractor(item: Product): string {
   return item.id;
 }
 
+const SKELETON_KEYS = ['skeleton-1', 'skeleton-2', 'skeleton-3', 'skeleton-4'];
+
 export function CategoryProductsScreen({ route, navigation, getProductsByCategory }: Props) {
   const { categorySlug } = route.params;
   const { state, retry } = useProductsByCategory(categorySlug, getProductsByCategory);
   const { topInset, scrollInsetProps } = useGlassScrollInsets();
+  const insets = useSafeAreaInsets();
 
   const renderItem = useCallback(
     ({ item }: { item: Product }) => (
@@ -35,9 +40,13 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
   return (
     <View style={styles.container}>
       {state.status === 'loading' && (
-        <View style={[styles.centered, { paddingTop: topInset }]}>
-          <ActivityIndicator size="large" accessibilityLabel="Loading products" />
-          <Text style={styles.centeredText}>Loading products…</Text>
+        <View
+          style={{ paddingTop: topInset + 16 }}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading products">
+          {SKELETON_KEYS.map(key => (
+            <ProductCardSkeleton key={key} />
+          ))}
         </View>
       )}
 
@@ -66,7 +75,7 @@ export function CategoryProductsScreen({ route, navigation, getProductsByCategor
           data={state.data}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 72 }]}
           {...scrollInsetProps}
         />
       )}
@@ -80,7 +89,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   listContent: {
-    paddingBottom: 24,
+    paddingTop: 16,
   },
   centered: {
     flex: 1,

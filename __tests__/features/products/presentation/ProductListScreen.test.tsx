@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactTestRenderer, { act } from 'react-test-renderer';
-import { ActivityIndicator, Text } from 'react-native';
+import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProductListScreen } from '../../../../src/features/products/presentation/screens/ProductListScreen';
 import { ProductDetailsScreen } from '../../../../src/features/products/presentation/screens/ProductDetailsScreen';
+import { ProductCardSkeleton } from '../../../../src/features/products/presentation/components/ProductCardSkeleton';
 import { RootStackParamList } from '../../../../src/app/navigation/types';
 import { Product } from '../../../../src/features/products/domain/models/Product';
 import { DEFAULT_PRODUCT_FILTERS } from '../../../../src/features/products/domain/models/ProductFilters';
@@ -66,8 +67,7 @@ describe('ProductListScreen', () => {
       renderer = renderNavigator(getProducts);
     });
 
-    expect(renderer.root.findAllByType(ActivityIndicator)).toHaveLength(1);
-    expect(findAllText(renderer)).toContain('Loading properties…');
+    expect(renderer.root.findAllByType(ProductCardSkeleton)).toHaveLength(4);
   });
 
   it('renders products after a successful fetch', async () => {
@@ -131,7 +131,7 @@ describe('ProductListScreen', () => {
     });
     await act(async () => {});
 
-    expect(findAllText(renderer)).toContain('Loading properties…');
+    expect(renderer.root.findAllByType(ProductCardSkeleton)).toHaveLength(4);
     expect(renderer.root.findAllByProps({ children: 'Aborted' })).toHaveLength(0);
   });
 
