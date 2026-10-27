@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '../../../../src/features/auth/presentatio
 import { LoginScreen } from '../../../../src/features/auth/presentation/screens/LoginScreen';
 import { AuthSessionStorage } from '../../../../src/features/auth/domain/repositories/AuthSessionStorage';
 import { AuthSession } from '../../../../src/features/auth/domain/models/AuthSession';
+import { ToastProvider } from '../../../../src/core/ui/Toast';
 
 const sampleSession: AuthSession = {
   accessToken: 'access-token',
@@ -37,14 +38,16 @@ async function renderLoginScreen(login: jest.Mock, sessionStorage: AuthSessionSt
   // settled (`signedOut`) state instead of a dangling `checking` one.
   await act(async () => {
     renderer = ReactTestRenderer.create(
-      <AuthProvider
-        login={login}
-        logout={jest.fn()}
-        restoreSession={jest.fn().mockResolvedValue(null)}
-        sessionStorage={sessionStorage}>
-        <LoginScreen />
-        <AuthStateProbe />
-      </AuthProvider>,
+      <ToastProvider>
+        <AuthProvider
+          login={login}
+          logout={jest.fn()}
+          restoreSession={jest.fn().mockResolvedValue(null)}
+          sessionStorage={sessionStorage}>
+          <LoginScreen />
+          <AuthStateProbe />
+        </AuthProvider>
+      </ToastProvider>,
     );
   });
   return renderer;
@@ -110,6 +113,13 @@ describe('LoginScreen', () => {
     expect(login).toHaveBeenCalledWith('emilys', 'emilyspass');
     expect(sessionStorage.save).toHaveBeenCalledWith(sampleSession);
     expect(renderer.root.findByProps({ testID: 'auth-state' }).props.children).toBe('signedIn');
+    expect(findAllText(renderer)).toContain('Logged in successfully');
+
+    // Unmount to clear the toast's pending auto-hide timer, rather than
+    // leaving it to fire after the test has finished.
+    act(() => {
+      renderer.unmount();
+    });
   });
 
   it('shows a loading indicator while the request is in flight and blocks repeated submissions', async () => {
@@ -136,6 +146,12 @@ describe('LoginScreen', () => {
 
     await act(async () => {
       resolveLogin(sampleSession);
+    });
+
+    // Unmount to clear the toast's pending auto-hide timer, rather than
+    // leaving it to fire after the test has finished.
+    act(() => {
+      renderer.unmount();
     });
   });
 

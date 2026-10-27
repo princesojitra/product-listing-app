@@ -1,6 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 // The default (non-"/static") import uses dynamic font loading, which
@@ -12,7 +11,7 @@ import { MaterialIcons } from '@react-native-vector-icons/material-icons/static'
 import { ProductsNavigator } from './ProductsNavigator';
 import { CategoriesNavigator } from './CategoriesNavigator';
 import { RootTabParamList } from './navigationTypes';
-import { AuthProvider, LoginScreen, useAuth } from '../../features/auth';
+import { AccountScreen, AuthProvider, LoginScreen, useAuth } from '../../features/auth';
 import { container } from '../../di/container';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -23,6 +22,10 @@ function ProductsTabIcon({ color, size }: { color: string; size: number }) {
 
 function CategoriesTabIcon({ color, size }: { color: string; size: number }) {
   return <MaterialIcons name="category" color={color} size={size} />;
+}
+
+function AccountTabIcon({ color, size }: { color: string; size: number }) {
+  return <MaterialIcons name="account-circle" color={color} size={size} />;
 }
 
 /**
@@ -51,7 +54,7 @@ export function RootNavigator() {
  * `NavigationContainer` so the app isn't torn down on sign-in.
  */
 function AuthGate() {
-  const { state, logout } = useAuth();
+  const { state } = useAuth();
 
   if (state.status === 'checking') {
     return (
@@ -66,32 +69,23 @@ function AuthGate() {
   }
 
   return (
-    <View style={styles.signedInContainer}>
-      <SafeAreaView edges={['top']} style={styles.accountBar}>
-        <Text style={styles.accountText} numberOfLines={1}>
-          {state.user.firstName} {state.user.lastName}
-        </Text>
-        <Pressable
-          onPress={logout}
-          accessibilityRole="button"
-          accessibilityLabel="Log out"
-          style={styles.logoutButton}>
-          <MaterialIcons name="logout" size={20} color="#374151" />
-        </Pressable>
-      </SafeAreaView>
-      <Tab.Navigator screenOptions={{ headerShown: false }}>
-        <Tab.Screen
-          name="Products"
-          component={ProductsNavigator}
-          options={{ tabBarIcon: ProductsTabIcon }}
-        />
-        <Tab.Screen
-          name="Categories"
-          component={CategoriesNavigator}
-          options={{ tabBarIcon: CategoriesTabIcon }}
-        />
-      </Tab.Navigator>
-    </View>
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen
+        name="Products"
+        component={ProductsNavigator}
+        options={{ tabBarIcon: ProductsTabIcon }}
+      />
+      <Tab.Screen
+        name="Categories"
+        component={CategoriesNavigator}
+        options={{ tabBarIcon: CategoriesTabIcon }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={AccountScreen}
+        options={{ headerShown: true, title: 'Account', tabBarIcon: AccountTabIcon }}
+      />
+    </Tab.Navigator>
   );
 }
 
@@ -101,27 +95,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f3f4f6',
-  },
-  signedInContainer: {
-    flex: 1,
-  },
-  accountBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#d1d5db',
-  },
-  accountText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  logoutButton: {
-    padding: 6,
   },
 });

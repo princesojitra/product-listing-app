@@ -35,4 +35,5 @@ export type CategoriesStackParamList = {
 export type RootTabParamList = {
   Products: undefined;
   Categories: undefined;
+  Account: undefined;
 };

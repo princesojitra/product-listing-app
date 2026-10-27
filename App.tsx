@@ -8,6 +8,7 @@
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootNavigator } from './src/app/navigation/RootNavigator';
+import { ToastProvider } from './src/core/ui/Toast';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -23,7 +24,9 @@ function App() {
 function AppContent() {
   return (
     <View style={styles.container}>
-      <RootNavigator />
+      <ToastProvider>
+        <RootNavigator />
+      </ToastProvider>
     </View>
   );
 }
