@@ -2,7 +2,9 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 ## Demo
 
-<video src="docs/media/products-demo.mp4" controls width="320"></video>
+![Demo](docs/media/products-demo.gif)
+
+[Watch the full demo video](docs/media/products-demo.mp4)
 
 # Getting Started
 
