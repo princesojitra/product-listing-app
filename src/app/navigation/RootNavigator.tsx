@@ -7,6 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 // being linked natively (via the package's podspec/Gradle autolinking),
 // which is what bare RN CLI apps need.
 import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
+import { container } from '../../di/container';
 import { ProductsNavigator } from './ProductsNavigator';
 import { CategoriesScreen } from '../../features/categories';
 import { RootTabParamList } from './navigationTypes';
@@ -38,9 +39,9 @@ export function RootNavigator() {
         />
         <Tab.Screen
           name="Categories"
-          component={CategoriesScreen}
-          options={{ tabBarIcon: CategoriesTabIcon }}
-        />
+          options={{ tabBarIcon: CategoriesTabIcon }}>
+          {() => <CategoriesScreen getCategories={container.getCategories} />}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );
