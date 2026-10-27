@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,23 +7,44 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Property } from '../types/property';
-import { useProperties } from '../hooks/useProperties';
-import { PropertyCard } from '../components/PropertyCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../../app/navigation/navigationTypes';
+import { Listing } from '../../domain/models/Listing';
+import { ListingRepository } from '../../domain/repositories/ListingRepository';
+import { useListings } from '../hooks/useListings';
+import { ListingCard } from '../components/ListingCard';
 
-function keyExtractor(item: Property): string {
+function keyExtractor(item: Listing): string {
   return item.id;
 }
 
-function renderItem({ item }: { item: Property }) {
-  return <PropertyCard property={item} />;
+type ListingsNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Listings'
+>;
+
+interface ListingsScreenProps {
+  repository: ListingRepository;
 }
 
-export function PropertyListingScreen() {
-  const { state, retry } = useProperties();
+export function ListingsScreen({ repository }: ListingsScreenProps) {
+  const { state, retry } = useListings(repository);
+  const navigation = useNavigation<ListingsNavigationProp>();
+
+  const renderItem = useCallback(
+    ({ item }: { item: Listing }) => (
+      <ListingCard
+        listing={item}
+        onPress={() => navigation.navigate('PropertyDetails', { listing: item })}
+      />
+    ),
+    [navigation],
+  );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.header} accessibilityRole="header">
         Properties
       </Text>
@@ -67,7 +88,7 @@ export function PropertyListingScreen() {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

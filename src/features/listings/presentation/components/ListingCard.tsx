@@ -1,37 +1,36 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { Property } from '../types/property';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Listing } from '../../domain/models/Listing';
 
-const priceFormatter = new Intl.NumberFormat('en-IN', {
+const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
+  currency: 'USD',
 });
 
-interface PropertyCardProps {
-  property: Property;
+interface ListingCardProps {
+  listing: Listing;
+  onPress: () => void;
 }
 
-export function PropertyCard({ property }: PropertyCardProps) {
+export function ListingCard({ listing, onPress }: ListingCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const bedroomsLabel = `${property.bedrooms} ${
-    property.bedrooms === 1 ? 'bedroom' : 'bedrooms'
-  }`;
-  const formattedPrice = priceFormatter.format(property.price);
+  const ratingLabel = `rated ${listing.rating} out of 5`;
+  const formattedPrice = priceFormatter.format(listing.price);
 
   return (
-    <View
+    <Pressable
+      onPress={onPress}
       style={styles.card}
       accessible
-      accessibilityRole="summary"
-      accessibilityLabel={`${property.title}, ${property.location}, ${formattedPrice}, ${bedroomsLabel}`}>
+      accessibilityRole="button"
+      accessibilityLabel={`${listing.title}, ${listing.category}, ${formattedPrice}, ${ratingLabel}`}>
       {imageFailed ? (
         <View style={[styles.image, styles.imageFallback]}>
           <Text style={styles.imageFallbackText}>Image unavailable</Text>
         </View>
       ) : (
         <Image
-          source={{ uri: property.imageUrl }}
+          source={{ uri: listing.imageUrl }}
           style={styles.image}
           onError={() => setImageFailed(true)}
           accessibilityIgnoresInvertColors
@@ -39,15 +38,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
       )}
       <View style={styles.details}>
         <Text style={styles.title} numberOfLines={2}>
-          {property.title}
+          {listing.title}
         </Text>
-        <Text style={styles.location}>{property.location}</Text>
+        <Text style={styles.description} numberOfLines={2}>
+          {listing.description}
+        </Text>
         <View style={styles.metaRow}>
           <Text style={styles.price}>{formattedPrice}</Text>
-          <Text style={styles.bedrooms}>{bedroomsLabel}</Text>
+          <Text style={styles.rating}>★ {listing.rating}</Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
-  location: {
+  description: {
     fontSize: 14,
     color: '#6b7280',
     marginTop: 4,
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  bedrooms: {
+  rating: {
     fontSize: 14,
     color: '#374151',
   },

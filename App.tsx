@@ -7,7 +7,7 @@
 
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PropertyListingScreen } from './src/features/properties/screens/PropertyListingScreen';
+import { RootNavigator } from './src/app/navigation/RootNavigator';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -23,7 +23,7 @@ function App() {
 function AppContent() {
   return (
     <View style={styles.container}>
-      <PropertyListingScreen />
+      <RootNavigator />
     </View>
   );
 }
